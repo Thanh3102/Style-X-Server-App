@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  username    String    @unique
+  password    String
+  name        String
+  email       String
+  phoneNumber String    @map("phone_number")
+  gender      Boolean
+  dateOfBirth DateTime  @map("date_of_birth") @db.Date
+  nationality String
+  isEmployed  Boolean   @default(true) @map("is_employed")
+  void        Boolean   @default(false)
+  lastLoginAt DateTime? @map("last_login_at")
+  // addressProvince    Int
+  // addressDistrict Int
+  // addressWard Int
+  // addressStress String
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  createdEmployeeId Int?       @map("created_employee_id")
+  creator           Employee?  @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
+  createdEmployees  Employee[] @relation("EmployeeCreator")
+
+  createdCategory Category[] @relation("category_creator")
+
+  lastUpdateSuppliers Supplier[] @relation("supplierLastUpdateUser")
+  createdSuppliers    Supplier[] @relation("supplierCreatedUser")
+  deletedSuppliers    Supplier[] @relation("supplierDeletedUser")
+  assignedSuppliers   Supplier[] @relation("supplierAssigned")
+
+  createdWarehouse Warehouse[] @relation("createdWarehouseUser")
+  updatedWarehouse Warehouse[] @relation("updatedWarehouseUser")
+
+  @@map("employees")
+}
+
+model Category {
+  id        Int      @id @default(autoincrement()) @db.MediumInt
+  title     String   @unique
+  slug      String?  @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  createdUserId Int?      @map("created_user_id")
+  createdUser   Employee? @relation("category_creator", fields: [createdUserId], references: [id])
+
+  @@map("categories")
+}
+
+model Supplier {
+  id            Int      @id @default(autoincrement())
+  code          String   @unique
+  name          String
+  phoneNumber   String?  @map("phone_number")
+  email         String?
+  taxCode       String?  @map("tax_code")
+  website       String?
+  fax           String?
+  country       String?
+  province      String?
+  district      String?
+  ward          String?
+  detailAddress String?  @map("detail_address")
+  active        Boolean  @default(true)
+  void          Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  assignedId Int      @map("assigned_id")
+  assigned   Employee @relation("supplierAssigned", fields: [assignedId], references: [id])
+
+  createdUserId Int?      @map("created_user_id")
+  createdUser   Employee? @relation("supplierCreatedUser", fields: [createdUserId], references: [id])
+
+  deletedUserId Int?      @map("deleted_user_id")
+  deletedUser   Employee? @relation("supplierDeletedUser", fields: [deletedUserId], references: [id])
+
+  lastUpdateUserId Int?
+  lastUpdateUser   Employee? @relation("supplierLastUpdateUser", fields: [lastUpdateUserId], references: [id])
+
+  tags SupplierTag[] @relation("supplierTag")
+
+  @@map("suppliers")
+}
+
+model Tag {
+  id         Int      @id @default(autoincrement())
+  name       String
+  type       String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  lastUsedAt DateTime @default(now())
+
+  supplierTags SupplierTag[] @relation("tagSupplier")
+
+  @@unique([name, type])
+  @@map("tags")
+}
+
+model SupplierTag {
+  id Int @id @default(autoincrement())
+
+  supplierId Int      @map("supplier_id")
+  supplier   Supplier @relation("supplierTag", fields: [supplierId], references: [id])
+
+  tagId Int @map("tag_id")
+  tags  Tag @relation("tagSupplier", fields: [tagId], references: [id])
+
+  @@map("supplier_tag")
+}
+
+model Warehouse {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  code        String   @unique
+  phoneNumber String?  @map("phone_number")
+  email       String?
+  country     String?
+  province    String?
+  district    String?
+  ward        String?
+  address     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt
+
+  createdUserId Int?      @map("created_user_id")
+  createdUser   Employee? @relation("createdWarehouseUser", fields: [createdUserId], references: [id])
+
+  updatedUserId Int?      @map("updated_user_id")
+  updatedUser   Employee? @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
+
+  @@map("warehouses")
+}
