@@ -8,87 +8,228 @@ datasource db {
 }
 
 model Employee {
-  id          Int       @id @default(autoincrement())
-  code        String    @unique
-  username    String    @unique
-  password    String
-  name        String
-  email       String
-  phoneNumber String    @map("phone_number")
-  gender      Boolean
-  dateOfBirth DateTime  @map("date_of_birth") @db.Date
-  nationality String
-  isEmployed  Boolean   @default(true) @map("is_employed")
-  void        Boolean   @default(false)
-  lastLoginAt DateTime? @map("last_login_at")
+  id                Int       @id @default(autoincrement())
+  code              String    @unique
+  username          String    @unique
+  password          String
+  name              String
+  email             String
+  phoneNumber       String    @map("phone_number")
+  gender            Boolean
+  dateOfBirth       DateTime  @map("date_of_birth") @db.Date
+  nationality       String
+  isEmployed        Boolean   @default(true) @map("is_employed")
+  void              Boolean   @default(false)
+  lastLoginAt       DateTime? @map("last_login_at")
   // addressProvince    Int
   // addressDistrict Int
   // addressWard Int
   // addressStress String
-  createdAt   DateTime  @default(now()) @map("created_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  createdEmployeeId Int?      @map("created_employee_id")
 
-  createdEmployeeId Int?       @map("created_employee_id")
-  creator           Employee?  @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
-  createdEmployees  Employee[] @relation("EmployeeCreator")
-
-  createdCategory Category[] @relation("category_creator")
-
-  lastUpdateSuppliers Supplier[] @relation("supplierLastUpdateUser")
-  createdSuppliers    Supplier[] @relation("supplierCreatedUser")
-  deletedSuppliers    Supplier[] @relation("supplierDeletedUser")
-  assignedSuppliers   Supplier[] @relation("supplierAssigned")
-
-  createdWarehouse Warehouse[] @relation("createdWarehouseUser")
-  updatedWarehouse Warehouse[] @relation("updatedWarehouseUser")
+  creator             Employee?          @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
+  createdEmployees    Employee[]         @relation("EmployeeCreator")
+  createdCategory     Category[]         @relation("category_creator")
+  lastUpdateSuppliers Supplier[]         @relation("supplierLastUpdateUser")
+  createdSuppliers    Supplier[]         @relation("supplierCreatedUser")
+  deletedSuppliers    Supplier[]         @relation("supplierDeletedUser")
+  assignedSuppliers   Supplier[]         @relation("supplierAssigned")
+  createdWarehouse    Warehouse[]        @relation("createdWarehouseUser")
+  updatedWarehouse    Warehouse[]        @relation("updatedWarehouseUser")
+  createdProduct      Product[]          @relation("ProductCreater")
+  updatedProduct      Product[]          @relation("ProductUpdater")
+  inventoryHistory    InventoryHistory[] @relation("InventoryHistoryChangeUser")
 
   @@map("employees")
 }
 
 model Category {
-  id        Int      @id @default(autoincrement()) @db.MediumInt
-  title     String   @unique
-  slug      String?  @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  title         String   @unique
+  slug          String?  @unique
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  createdUserId Int?     @map("created_user_id")
 
-  createdUserId Int?      @map("created_user_id")
-  createdUser   Employee? @relation("category_creator", fields: [createdUserId], references: [id])
+  createdUser     Employee?         @relation("category_creator", fields: [createdUserId], references: [id])
+  productCategory ProductCategory[] @relation("ProductCategory_Category")
 
   @@map("categories")
 }
 
+model Product {
+  id               Int      @id @default(autoincrement())
+  name             String   @unique
+  skuCode          String?  @map("sku_code")
+  barCode          String?  @map("bar_code")
+  unit             String?
+  description      String?  @db.LongText
+  shortDescription String?  @map("short_description") @db.LongText
+  void             Boolean  @default(false)
+  avaiable         Boolean
+  type             String?
+  vendor           String?
+  image            String?
+  sellPrice        Int      @default(0) @map("sell_price") @db.UnsignedInt
+  costPrice        Int      @default(0) @map("cost_price") @db.UnsignedInt
+  comparePrice     Int      @default(0) @map("compare_price") @db.UnsignedInt
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  createdUserId    Int?     @map("created_user_id")
+  updatedUserId    Int?     @map("updated_user_id")
+
+  createdUser       Employee?           @relation("ProductCreater", fields: [createdUserId], references: [id])
+  updatedUser       Employee?           @relation("ProductUpdater", fields: [updatedUserId], references: [id])
+  productProperties ProductProperties[] @relation("ProductProperties")
+  productImages     ProductImages[]     @relation("ProductImages")
+  tags              ProductTag[]        @relation("productTag")
+  variants          ProductVariants[]   @relation("ProductVariants")
+  productCategories ProductCategory[]   @relation("ProductCategory_Product")
+
+  @@map("products")
+}
+
+model ProductProperties {
+  id        Int    @id @default(autoincrement())
+  name      String
+  position  Int    @db.TinyInt
+  productId Int    @map("product_id")
+
+  product Product                 @relation("ProductProperties", references: [id], fields: [productId])
+  values  ProductPropertyValues[] @relation("ProductProperties")
+
+  @@unique([productId, name])
+  @@map("product_properties")
+}
+
+model ProductPropertyValues {
+  id    Int    @id @default(autoincrement())
+  value String
+
+  productPropertyId Int               @map("product_property_id")
+  productProperty   ProductProperties @relation("ProductProperties", fields: [productPropertyId], references: [id])
+
+  @@unique([value, productPropertyId])
+  @@map("product_property_values")
+}
+
+model ProductVariants {
+  id           Int      @id @default(autoincrement())
+  title        String
+  skuCode      String?  @map("sku_code")
+  barCode      String?  @map("bar_code")
+  unit         String?
+  void         Boolean  @default(false)
+  sellPrice    Int      @default(0) @map("sell_price") @db.UnsignedInt
+  costPrice    Int      @default(0) @map("cost_price") @db.UnsignedInt
+  comparePrice Int      @default(0) @map("compare_price") @db.UnsignedInt
+  option1      String?
+  option2      String?
+  option3      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  productId    Int      @map("product_id")
+  image        String?
+
+  inventories Inventory[] @relation("InventoryProductVariant")
+  product     Product     @relation("ProductVariants", references: [id], fields: [productId])
+
+  // @@unique([title, ])
+  @@map("product_variants")
+}
+
+model ProductImages {
+  id        Int      @id @default(autoincrement())
+  url       String
+  assetId   String   @unique @map("asset_id")
+  publicId  String   @unique @map("public_id")
+  bytes     Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  productId Int      @map("product_id")
+
+  product Product @relation("ProductImages", references: [id], fields: [productId])
+
+  @@map("product_images")
+}
+
+model ProductCategory {
+  categoryId Int @map("category_id")
+  productId  Int @map("product_id")
+
+  category Category @relation("ProductCategory_Category", fields: [categoryId], references: [id])
+  product  Product  @relation("ProductCategory_Product", fields: [productId], references: [id])
+
+  @@id([categoryId, productId])
+  @@map("product_category")
+}
+
+model Inventory {
+  id            Int @id @default(autoincrement())
+  avaiable      Int @default(0)
+  onHand        Int @default(0) @map("on_hand")
+  onTransaction Int @default(0) @map("on_transaction")
+  onReceive     Int @default(0) @map("on_receive")
+  warehouse_id  Int
+  variant_id    Int
+
+  histories      InventoryHistory[] @relation("InventoryHistory_Inventory")
+  warehouse      Warehouse          @relation("InventoryWarehouse", references: [id], fields: [warehouse_id])
+  productVariant ProductVariants    @relation("InventoryProductVariant", references: [id], fields: [variant_id])
+}
+
+model InventoryHistory {
+  id                          Int      @id @default(autoincrement())
+  avaiableQuantityChange      Int?     @default(0) @map("avaiable_quantity_change")
+  onHandQuantityChange        Int?     @default(0) @map("on_hand_quantity_change")
+  OnTransactionQuantityChange Int?     @default(0) @map("on_transaction_quantity_change")
+  onReceiveQuantityChange     Int?     @default(0) @map("on_receive_quantity_change")
+  newAvaiable                 Int?     @map("new_avaiable")
+  newOnHand                   Int?     @map("new_on_hand")
+  newOnTransaction            Int?     @map("new_on_transaction")
+  newOnReceive                Int?     @map("new_receive")
+  transactionType             String   @map("transaction_type")
+  transactionAction           String   @map("transaction_action")
+  reason                      String?
+  changeOn                    DateTime @default(now()) @map("change_on")
+  changeUserId                Int      @map("change_user_id")
+  inventoryId                 Int      @map("inventory_id")
+
+  inventory  Inventory @relation("InventoryHistory_Inventory", fields: [inventoryId], references: [id])
+  changeUser Employee? @relation("InventoryHistoryChangeUser", references: [id], fields: [changeUserId])
+
+  @@map("inventory_history")
+}
+
 model Supplier {
-  id            Int      @id @default(autoincrement())
-  code          String   @unique
-  name          String
-  phoneNumber   String?  @map("phone_number")
-  email         String?
-  taxCode       String?  @map("tax_code")
-  website       String?
-  fax           String?
-  country       String?
-  province      String?
-  district      String?
-  ward          String?
-  detailAddress String?  @map("detail_address")
-  active        Boolean  @default(true)
-  void          Boolean  @default(false)
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id               Int      @id @default(autoincrement())
+  code             String   @unique
+  name             String
+  phoneNumber      String?  @map("phone_number")
+  email            String?
+  taxCode          String?  @map("tax_code")
+  website          String?
+  fax              String?
+  country          String?
+  province         String?
+  district         String?
+  ward             String?
+  detailAddress    String?  @map("detail_address")
+  active           Boolean  @default(true)
+  void             Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  assignedId       Int      @map("assigned_id")
+  createdUserId    Int?     @map("created_user_id")
+  deletedUserId    Int?     @map("deleted_user_id")
+  lastUpdateUserId Int?     @map("last_update_user_id")
 
-  assignedId Int      @map("assigned_id")
-  assigned   Employee @relation("supplierAssigned", fields: [assignedId], references: [id])
-
-  createdUserId Int?      @map("created_user_id")
-  createdUser   Employee? @relation("supplierCreatedUser", fields: [createdUserId], references: [id])
-
-  deletedUserId Int?      @map("deleted_user_id")
-  deletedUser   Employee? @relation("supplierDeletedUser", fields: [deletedUserId], references: [id])
-
-  lastUpdateUserId Int?
-  lastUpdateUser   Employee? @relation("supplierLastUpdateUser", fields: [lastUpdateUserId], references: [id])
-
-  tags SupplierTag[] @relation("supplierTag")
+  assigned       Employee      @relation("supplierAssigned", fields: [assignedId], references: [id])
+  createdUser    Employee?     @relation("supplierCreatedUser", fields: [createdUserId], references: [id])
+  deletedUser    Employee?     @relation("supplierDeletedUser", fields: [deletedUserId], references: [id])
+  lastUpdateUser Employee?     @relation("supplierLastUpdateUser", fields: [lastUpdateUserId], references: [id])
+  tags           SupplierTag[] @relation("supplierTag")
 
   @@map("suppliers")
 }
@@ -102,42 +243,53 @@ model Tag {
   lastUsedAt DateTime @default(now())
 
   supplierTags SupplierTag[] @relation("tagSupplier")
+  productTags  ProductTag[]  @relation("tagProduct")
 
   @@unique([name, type])
   @@map("tags")
 }
 
 model SupplierTag {
-  id Int @id @default(autoincrement())
+  id         Int @id @default(autoincrement())
+  supplierId Int @map("supplier_id")
+  tagId      Int @map("tag_id")
 
-  supplierId Int      @map("supplier_id")
-  supplier   Supplier @relation("supplierTag", fields: [supplierId], references: [id])
-
-  tagId Int @map("tag_id")
-  tags  Tag @relation("tagSupplier", fields: [tagId], references: [id])
+  supplier Supplier @relation("supplierTag", fields: [supplierId], references: [id])
+  tags     Tag      @relation("tagSupplier", fields: [tagId], references: [id])
 
   @@map("supplier_tag")
 }
 
+model ProductTag {
+  id        Int @id @default(autoincrement())
+  productId Int @map("product_id")
+  tagId     Int @map("tag_id")
+
+  product Product @relation("productTag", fields: [productId], references: [id])
+  tags    Tag     @relation("tagProduct", fields: [tagId], references: [id])
+
+  @@map("product_tag")
+}
+
 model Warehouse {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  code        String   @unique
-  phoneNumber String?  @map("phone_number")
-  email       String?
-  country     String?
-  province    String?
-  district    String?
-  ward        String?
-  address     String?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  code          String   @unique
+  phoneNumber   String?  @map("phone_number")
+  email         String?
+  country       String?
+  province      String?
+  district      String?
+  ward          String?
+  address       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt
+  createdUserId Int?     @map("created_user_id")
+  updatedUserId Int?     @map("updated_user_id")
 
-  createdUserId Int?      @map("created_user_id")
-  createdUser   Employee? @relation("createdWarehouseUser", fields: [createdUserId], references: [id])
-
-  updatedUserId Int?      @map("updated_user_id")
-  updatedUser   Employee? @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
+  createdUser Employee?   @relation("createdWarehouseUser", fields: [createdUserId], references: [id])
+  updatedUser Employee?   @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
+  inventories Inventory[] @relation("InventoryWarehouse")
 
   @@map("warehouses")
 }

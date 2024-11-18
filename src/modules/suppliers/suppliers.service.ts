@@ -22,6 +22,7 @@ import {
   getThisWeekStartEnd,
   getToday,
 } from 'src/utils/helper/DateHelper';
+import { isInteger } from 'src/utils/helper/StringHelper';
 
 @Injectable()
 export class SuppliersService {
@@ -450,10 +451,9 @@ export class SuppliersService {
 
   async getDetail(id: string | undefined, res: Response) {
     try {
-      const ID = Number(id);
-      if (isNaN(ID)) throw new BadRequestException('Mã không hợp lệ');
+      if (!isInteger(id)) throw new BadRequestException('Mã không hợp lệ');
 
-      await this.checkId(ID);
+      await this.checkId(parseInt(id));
 
       const supplier = await this.prisma.supplier.findUnique({
         select: {
@@ -534,7 +534,7 @@ export class SuppliersService {
     }
   }
 
-  private async checkId(id: unknown) {
+  private async checkId(id: number) {
     const record = await this.prisma.supplier.findUnique({
       select: {
         id: true,

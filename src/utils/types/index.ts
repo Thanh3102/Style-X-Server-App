@@ -6,7 +6,7 @@ export enum FilterParam {
   LIMIT = 'limit',
   QUERY = 'query',
   TAG_TYPE = 'tagType',
-  ASSIGN_IDS = 'assignIds'
+  ASSIGN_IDS = 'assignIds',
 }
 
 export type QueryParams = Partial<Record<FilterParam, string>>;
@@ -23,4 +23,17 @@ export enum DateFilterOptionValue {
   LAST_YEAR = 'last_year',
   THIS_YEAR = 'this_year',
   OPTION = 'date_option',
+}
+
+export enum InventoryTransactionType {
+  PRODUCT = 'Sản phẩm',
+  SELL = 'Bán hàng',
+  RECEIVE_INVENTORY = 'Nhập hàng',
+  PURCHASE_ORDER = 'Đặt hàng nhập',
+}
+
+export enum InventoryProductTransactionAction {
+  INITIAL_SETUP = 'Khởi tạo kho',
+  RECEIPT = 'Nhập kho',
+  ADJUST = 'Điều chỉnh số lượng',
 }
