@@ -75,10 +75,11 @@ async function createCategories() {
 }
 
 async function main() {
-  // await createSystemAccount();
-  // await createWarehouse();
+  await createSystemAccount();
+  await createWarehouse();
   await createCategories();
 }
+
 main()
   .then(async () => {
     await prisma.$disconnect();

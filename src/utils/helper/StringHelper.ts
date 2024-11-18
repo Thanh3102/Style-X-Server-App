@@ -13,3 +13,9 @@ export const convertToNumber = (
 export const isNumber = (str: string) => {
   return typeof Number(str) === 'number' ? true : false;
 };
+
+export const isInteger = (str: string | undefined) => {
+  if (!str) return false;
+  const num = parseInt(str, 10);
+  return !isNaN(num) && Number.isInteger(num) && String(num) === str;
+};
