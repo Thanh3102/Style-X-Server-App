@@ -7,6 +7,9 @@ export enum FilterParam {
   QUERY = 'query',
   TAG_TYPE = 'tagType',
   ASSIGN_IDS = 'assignIds',
+  ACTIVE = 'active',
+  RECEIVE_IDS = 'receiveIds',
+  VARIANT_IDS = 'variantIds',
 }
 
 export type QueryParams = Partial<Record<FilterParam, string>>;
@@ -32,8 +35,10 @@ export enum InventoryTransactionType {
   PURCHASE_ORDER = 'Đặt hàng nhập',
 }
 
-export enum InventoryProductTransactionAction {
+export enum InventoryTransactionAction {
   INITIAL_SETUP = 'Khởi tạo kho',
   RECEIPT = 'Nhập kho',
+  RECEIVE_CANCEL = 'Hủy đơn nhập',
   ADJUST = 'Điều chỉnh số lượng',
+  PURCHASE = 'Đặt hàng nhập',
 }

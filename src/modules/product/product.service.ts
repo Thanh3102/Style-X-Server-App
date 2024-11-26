@@ -12,7 +12,7 @@ import {
 } from './product';
 import { Response } from 'express';
 import {
-  InventoryProductTransactionAction,
+  InventoryTransactionAction,
   InventoryTransactionType,
   QueryParams,
 } from 'src/utils/types';
@@ -55,10 +55,13 @@ export class ProductService {
     if (product.void) throw new Error('Sản phẩm đã bị xóa');
   };
 
-  private getTotalAvaiableInventory = async (productId: number) => {
+  private getInventoryStock = async (productId: number) => {
     const result = await this.prisma.inventory.aggregate({
       _sum: {
         avaiable: true,
+        onHand: true,
+        onReceive: true,
+        onTransaction: true,
       },
       where: {
         productVariant: {
@@ -67,7 +70,23 @@ export class ProductService {
       },
     });
 
-    return result._sum.avaiable;
+    return result._sum;
+  };
+
+  private getVariantInventoryStock = async (variantId: number) => {
+    const result = await this.prisma.inventory.aggregate({
+      _sum: {
+        avaiable: true,
+        onHand: true,
+        onReceive: true,
+        onTransaction: true,
+      },
+      where: {
+        variant_id: variantId,
+      },
+    });
+
+    return result._sum;
   };
 
   private getProductOptions = async (productId: number) => {
@@ -137,6 +156,8 @@ export class ProductService {
             id: true,
             avaiable: true,
             onHand: true,
+            onTransaction: true,
+            onReceive: true,
             warehouse: {
               select: {
                 id: true,
@@ -211,8 +232,6 @@ export class ProductService {
     const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    const productSelect = {};
-
     let condition = {
       query: {},
       created: {},
@@ -267,6 +286,7 @@ export class ProductService {
         variants: {
           select: {
             id: true,
+            productId: true,
             skuCode: true,
             barCode: true,
             unit: true,
@@ -300,11 +320,27 @@ export class ProductService {
     const totalPage = Math.floor(countProduct / limit);
 
     const responseProducts = [];
+
     for (const product of products) {
-      const count = await this.getTotalAvaiableInventory(product.id);
+      const stock = await this.getInventoryStock(product.id);
+      const variantsWithStock = [];
+      for (const variant of product.variants) {
+        const variantStock = await this.getVariantInventoryStock(variant.id);
+        variantsWithStock.push({
+          ...variant,
+          avaiable: variantStock.avaiable,
+          onHand: variantStock.onHand,
+          onTransaction: variantStock.onTransaction,
+          onReceive: variantStock.onReceive,
+        });
+      }
       responseProducts.push({
         ...product,
-        inventory_avaiable: count,
+        avaiable: stock.avaiable,
+        onHand: stock.onHand,
+        onTransaction: stock.onTransaction,
+        onReceive: stock.onReceive,
+        variants: variantsWithStock,
       });
     }
 
@@ -313,6 +349,114 @@ export class ProductService {
       paginition: {
         total: countProduct % limit == 0 ? totalPage : totalPage + 1,
         count: countProduct,
+        page: page,
+        limit: limit,
+      },
+    });
+  }
+
+  async getVariants(queryParams: QueryParams, res: Response) {
+    const { page: pg, limit: lim, query } = queryParams;
+
+    const page = !isNaN(Number(pg)) ? Number(pg) : 1;
+    const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
+    const skip = page === 1 ? 0 : (page - 1) * limit;
+
+    let whereCondition: any = {
+      void: false,
+    };
+
+    if (query) {
+      whereCondition.OR = [
+        {
+          product: {
+            name: {
+              contains: query,
+            },
+          },
+        },
+        {
+          title: {
+            contains: query,
+          },
+        },
+        {
+          skuCode: {
+            contains: query,
+          },
+        },
+        {
+          barCode: {
+            contains: query,
+          },
+        },
+      ];
+    }
+
+    const variants = await this.prisma.productVariants.findMany({
+      select: {
+        id: true,
+        skuCode: true,
+        barCode: true,
+        unit: true,
+        comparePrice: true,
+        sellPrice: true,
+        costPrice: true,
+        image: true,
+        option1: true,
+        option2: true,
+        option3: true,
+        title: true,
+        createdAt: true,
+
+        product: {
+          select: {
+            id: true,
+            name: true,
+            barCode: true,
+            skuCode: true,
+            comparePrice: true,
+            sellPrice: true,
+            costPrice: true,
+            image: true,
+            createdAt: true,
+          },
+        },
+      },
+      where: whereCondition,
+
+      orderBy: {
+        createdAt: 'desc',
+        productId: 'desc',
+      },
+      take: limit,
+      skip: skip,
+    });
+
+    const countVariants = await this.prisma.productVariants.count({
+      where: whereCondition,
+    });
+
+    const totalPage = Math.floor(countVariants / limit);
+
+    const responseVariants = [];
+
+    for (const variant of variants) {
+      const stock = await this.getVariantInventoryStock(variant.id);
+      responseVariants.push({
+        ...variant,
+        avaiable: stock.avaiable,
+        onHand: stock.onHand,
+        onTransaction: stock.onTransaction,
+        onReceive: stock.onReceive,
+      });
+    }
+
+    return res.status(200).json({
+      variants: responseVariants,
+      paginition: {
+        total: countVariants % limit == 0 ? totalPage : totalPage + 1,
+        count: countVariants,
         page: page,
         limit: limit,
       },
@@ -474,7 +618,7 @@ export class ProductService {
                       newOnHand: warehouse.onHand,
                       transactionType: InventoryTransactionType.PRODUCT,
                       transactionAction:
-                        InventoryProductTransactionAction.INITIAL_SETUP,
+                        InventoryTransactionAction.INITIAL_SETUP,
                       changeUserId: requestUserId,
                     },
                   },
@@ -511,7 +655,7 @@ export class ProductService {
                         newOnHand: warehouse.onHand,
                         transactionType: InventoryTransactionType.PRODUCT,
                         transactionAction:
-                          InventoryProductTransactionAction.INITIAL_SETUP,
+                          InventoryTransactionAction.INITIAL_SETUP,
                         changeUserId: requestUserId,
                       },
                     },
@@ -682,8 +826,8 @@ export class ProductService {
       orderBy: {
         title: 'asc',
       },
-      take: 10,
-      skip: 0,
+      // take: 10,
+      // skip: 0,
     });
 
     return categories;

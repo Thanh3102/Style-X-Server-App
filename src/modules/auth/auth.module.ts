@@ -4,6 +4,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EmployeesService } from '../employees/employees.service';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { EmployeesService } from '../employees/employees.service';
       secret: process.env.JWT_SECRET_KEY,
       global: true,
     }),
+    MailModule
   ],
   controllers: [AuthController],
   providers: [AuthService, PrismaService, EmployeesService],

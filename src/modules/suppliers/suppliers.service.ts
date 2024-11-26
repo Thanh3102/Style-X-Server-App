@@ -7,7 +7,6 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CheckCodeOptions,
   CreateSupplierDTO,
-  GetDataOptions,
   UpdateSupplierDTO,
 } from './suppliers.type';
 import { TagType } from '../tags/tag.type';
@@ -15,13 +14,8 @@ import { Response } from 'express';
 import { TagsService } from '../tags/tags.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { EmployeesService } from '../employees/employees.service';
-import { DateFilterOptionValue, QueryParams } from 'src/utils/types';
-import {
-  convertParamsToCondition,
-  getPreviousDay,
-  getThisWeekStartEnd,
-  getToday,
-} from 'src/utils/helper/DateHelper';
+import { QueryParams } from 'src/utils/types';
+import { convertParamsToCondition } from 'src/utils/helper/DateHelper';
 import { isInteger } from 'src/utils/helper/StringHelper';
 
 @Injectable()
@@ -295,14 +289,14 @@ export class SuppliersService {
       createdOnMax,
       createdOnMin,
       assignIds,
+      active,
     } = queryParams;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
     const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
-
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let condition = {
+    let condition: any = {
       query: {},
       created: {},
       assignedIds: {},
@@ -405,6 +399,13 @@ export class SuppliersService {
         assignedId: {
           in: Array.from(values),
         },
+      };
+    }
+
+    if (active) {
+      condition.default = {
+        ...condition.default,
+        active: active === 'true',
       };
     }
 
