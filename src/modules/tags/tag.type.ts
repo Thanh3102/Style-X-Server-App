@@ -1,4 +1,5 @@
 export enum TagType {
   SUPPLIER = 'supplier',
-  PRODUCT = "product"
+  PRODUCT = "product",
+  RECEIVE = "receive_inventory"
 }

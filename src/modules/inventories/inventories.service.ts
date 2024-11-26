@@ -6,7 +6,7 @@ import {
 import { ChangeOnHandDTO, CreateInventoryDTO } from './inventories.type';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
-  InventoryProductTransactionAction,
+  InventoryTransactionAction,
   InventoryTransactionType,
   QueryParams,
 } from 'src/utils/types';
@@ -35,8 +35,7 @@ export class InventoriesService {
                   newAvaiable: warehouse.onHand,
                   newOnHand: warehouse.onHand,
                   transactionType: InventoryTransactionType.PRODUCT,
-                  transactionAction:
-                    InventoryProductTransactionAction.INITIAL_SETUP,
+                  transactionAction: InventoryTransactionAction.INITIAL_SETUP,
                   changeUserId: requestUserId,
                 },
               },
@@ -79,7 +78,7 @@ export class InventoriesService {
 
         await p.inventoryHistory.create({
           data: {
-            transactionAction: InventoryProductTransactionAction.ADJUST,
+            transactionAction: InventoryTransactionAction.ADJUST,
             transactionType: InventoryTransactionType.PRODUCT,
             reason: dto.reason,
             avaiableQuantityChange: avaiableChange,
@@ -99,21 +98,42 @@ export class InventoriesService {
     }
   }
 
-  async getHistory(variantId: string | undefined, queryParams: QueryParams) {
-    if (!isInteger(variantId)) throw new BadRequestException('Id không hợp lệ');
-    const variant_id = parseInt(variantId);
-
-    const { page: pg, limit: lim } = queryParams;
+  async getHistory(queryParams: QueryParams) {
+    const { page: pg, limit: lim, receiveIds, variantIds } = queryParams;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
     const limit = !isNaN(Number(lim)) ? Number(lim) : 50;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    const whereCondition = {
-      inventory: {
-        variant_id: variant_id,
-      },
-    };
+    const whereCondition: any = {};
+
+    console.log('Params', queryParams);
+
+    if (variantIds) {
+      const ids = variantIds.split(',').map((id) => {
+        if (isInteger(id)) return parseInt(id);
+        return 0;
+      });
+
+      whereCondition.inventory = {
+        ...whereCondition.inventory,
+        variant_id: {
+          in: [...ids],
+        },
+      };
+    }
+
+    if (receiveIds) {
+      const ids = receiveIds.split(',').map((id) => {
+        if (isInteger(id)) return parseInt(id);
+        return 0;
+      });
+      whereCondition.receiveInventoryId = {
+        in: [...ids],
+      };
+    }
+
+    console.log('Where condition', whereCondition);
 
     const inventories = await this.prisma.inventoryHistory.findMany({
       where: whereCondition,
@@ -130,12 +150,32 @@ export class InventoriesService {
                 name: true,
               },
             },
+            productVariant: {
+              select: {
+                id: true,
+                title: true,
+                product: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        receiveInventory: {
+          select: {
+            id: true,
+            code: true,
           },
         },
       },
       orderBy: {
         changeOn: 'desc',
       },
+      skip: skip,
+      take: limit,
     });
 
     const countInventoriesHistory = await this.prisma.inventoryHistory.count({

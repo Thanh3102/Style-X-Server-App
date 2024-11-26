@@ -44,8 +44,8 @@ export class InventoriesController {
     throw new BadRequestException('Mã phiên bản không hợp lệ');
   }
 
-  @Get(':variantId/history')
-  getHistory(@Param() { variantId },@Query() queryParams: QueryParams) {
-    return this.inventoriesService.getHistory(variantId, queryParams);
+  @Get('/history')
+  getHistory(@Query() queryParams: QueryParams) {
+    return this.inventoriesService.getHistory(queryParams);
   }
 }

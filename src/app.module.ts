@@ -8,6 +8,9 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { InventoriesModule } from './modules/inventories/inventories.module';
+import { ReceiveInventoryModule } from './modules/receive-inventory/receive-inventory.module';
+import { DiscountModule } from './modules/discount/discount.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { InventoriesModule } from './modules/inventories/inventories.module';
     WarehousesModule,
     CloudinaryModule,
     InventoriesModule,
+    ReceiveInventoryModule,
+    DiscountModule,
+    MailModule,
   ],
   controllers: [],
   providers: [],

@@ -21,25 +21,24 @@ model Employee {
   isEmployed        Boolean   @default(true) @map("is_employed")
   void              Boolean   @default(false)
   lastLoginAt       DateTime? @map("last_login_at")
-  // addressProvince    Int
-  // addressDistrict Int
-  // addressWard Int
-  // addressStress String
   createdAt         DateTime  @default(now()) @map("created_at")
   createdEmployeeId Int?      @map("created_employee_id")
 
-  creator             Employee?          @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
-  createdEmployees    Employee[]         @relation("EmployeeCreator")
-  createdCategory     Category[]         @relation("category_creator")
-  lastUpdateSuppliers Supplier[]         @relation("supplierLastUpdateUser")
-  createdSuppliers    Supplier[]         @relation("supplierCreatedUser")
-  deletedSuppliers    Supplier[]         @relation("supplierDeletedUser")
-  assignedSuppliers   Supplier[]         @relation("supplierAssigned")
-  createdWarehouse    Warehouse[]        @relation("createdWarehouseUser")
-  updatedWarehouse    Warehouse[]        @relation("updatedWarehouseUser")
-  createdProduct      Product[]          @relation("ProductCreater")
-  updatedProduct      Product[]          @relation("ProductUpdater")
-  inventoryHistory    InventoryHistory[] @relation("InventoryHistoryChangeUser")
+  creator                 Employee?          @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
+  createdEmployees        Employee[]         @relation("EmployeeCreator")
+  createdCategory         Category[]         @relation("category_creator")
+  lastUpdateSuppliers     Supplier[]         @relation("supplierLastUpdateUser")
+  createdSuppliers        Supplier[]         @relation("supplierCreatedUser")
+  deletedSuppliers        Supplier[]         @relation("supplierDeletedUser")
+  assignedSuppliers       Supplier[]         @relation("supplierAssigned")
+  createdWarehouse        Warehouse[]        @relation("createdWarehouseUser")
+  updatedWarehouse        Warehouse[]        @relation("updatedWarehouseUser")
+  createdProduct          Product[]          @relation("ProductCreater")
+  updatedProduct          Product[]          @relation("ProductUpdater")
+  inventoryHistory        InventoryHistory[] @relation("InventoryHistoryChangeUser")
+  createdReceiveInventory ReceiveInventory[] @relation("ReceiveInventory_CreateUser")
+  receiveChangeHistories  ReceiveHistory[]   @relation("ReceiveHistory_ChangeUser")
+  createdDiscount         Discount[]         @relation("DiscountCreatedUser")
 
   @@map("employees")
 }
@@ -132,8 +131,9 @@ model ProductVariants {
   productId    Int      @map("product_id")
   image        String?
 
-  inventories Inventory[] @relation("InventoryProductVariant")
-  product     Product     @relation("ProductVariants", references: [id], fields: [productId])
+  inventories  Inventory[]   @relation("InventoryProductVariant")
+  product      Product       @relation("ProductVariants", references: [id], fields: [productId])
+  receiveItems ReceiveItem[] @relation("ReceiveItem_Variant")
 
   // @@unique([title, ])
   @@map("product_variants")
@@ -195,9 +195,11 @@ model InventoryHistory {
   changeOn                    DateTime @default(now()) @map("change_on")
   changeUserId                Int      @map("change_user_id")
   inventoryId                 Int      @map("inventory_id")
+  receiveInventoryId          Int?     @map("receive_inventory_id")
 
-  inventory  Inventory @relation("InventoryHistory_Inventory", fields: [inventoryId], references: [id])
-  changeUser Employee? @relation("InventoryHistoryChangeUser", references: [id], fields: [changeUserId])
+  inventory        Inventory         @relation("InventoryHistory_Inventory", fields: [inventoryId], references: [id])
+  changeUser       Employee?         @relation("InventoryHistoryChangeUser", references: [id], fields: [changeUserId])
+  receiveInventory ReceiveInventory? @relation("InventoryHistory_Receive", references: [id], fields: [receiveInventoryId])
 
   @@map("inventory_history")
 }
@@ -225,11 +227,12 @@ model Supplier {
   deletedUserId    Int?     @map("deleted_user_id")
   lastUpdateUserId Int?     @map("last_update_user_id")
 
-  assigned       Employee      @relation("supplierAssigned", fields: [assignedId], references: [id])
-  createdUser    Employee?     @relation("supplierCreatedUser", fields: [createdUserId], references: [id])
-  deletedUser    Employee?     @relation("supplierDeletedUser", fields: [deletedUserId], references: [id])
-  lastUpdateUser Employee?     @relation("supplierLastUpdateUser", fields: [lastUpdateUserId], references: [id])
-  tags           SupplierTag[] @relation("supplierTag")
+  assigned           Employee           @relation("supplierAssigned", fields: [assignedId], references: [id])
+  createdUser        Employee?          @relation("supplierCreatedUser", fields: [createdUserId], references: [id])
+  deletedUser        Employee?          @relation("supplierDeletedUser", fields: [deletedUserId], references: [id])
+  lastUpdateUser     Employee?          @relation("supplierLastUpdateUser", fields: [lastUpdateUserId], references: [id])
+  tags               SupplierTag[]      @relation("supplierTag")
+  receiveInventories ReceiveInventory[] @relation("ReceiveInventory_Supplier")
 
   @@map("suppliers")
 }
@@ -242,8 +245,9 @@ model Tag {
   updatedAt  DateTime @updatedAt @map("updated_at")
   lastUsedAt DateTime @default(now())
 
-  supplierTags SupplierTag[] @relation("tagSupplier")
-  productTags  ProductTag[]  @relation("tagProduct")
+  supplierTags SupplierTag[]         @relation("tagSupplier")
+  productTags  ProductTag[]          @relation("tagProduct")
+  receiveTags  ReceiveInventoryTag[] @relation("tagReceive")
 
   @@unique([name, type])
   @@map("tags")
@@ -287,9 +291,205 @@ model Warehouse {
   createdUserId Int?     @map("created_user_id")
   updatedUserId Int?     @map("updated_user_id")
 
-  createdUser Employee?   @relation("createdWarehouseUser", fields: [createdUserId], references: [id])
-  updatedUser Employee?   @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
-  inventories Inventory[] @relation("InventoryWarehouse")
+  createdUser        Employee?          @relation("createdWarehouseUser", fields: [createdUserId], references: [id])
+  updatedUser        Employee?          @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
+  inventories        Inventory[]        @relation("InventoryWarehouse")
+  receiveInventories ReceiveInventory[] @relation("ReceiveInventory_Warehouse")
 
   @@map("warehouses")
+}
+
+model ReceiveInventory {
+  id                            Int       @id @default(autoincrement())
+  code                          String
+  importAfterCreate             Boolean   @map("import_after_create")
+  totalReceipt                  Int       @map("total_receipt")
+  totalLandedCost               Int       @map("total_landed_cost")
+  totalItems                    Int       @map("total_items")
+  totalItemsDiscount            Int       @map("total_items_discount")
+  totalItemsPrice               Int       @map("total_items_price")
+  totalItemsPriceBeforeDiscount Int       @map("total_item_price_before_discount")
+  transactionStatus             String    @map("transaction_status")
+  transactionRemainAmount       Int       @map("transaction_remain_amount")
+  status                        String
+  note                          String?
+  warehouseId                   Int       @map("warehouseId")
+  supplierId                    Int       @map("supplier_id")
+  expectedAt                    DateTime? @db.Date
+  createdAt                     DateTime  @default(now())
+  createUserId                  Int
+  void                          Boolean   @default(false)
+
+  supplier            Supplier              @relation("ReceiveInventory_Supplier", references: [id], fields: [supplierId])
+  warehouse           Warehouse             @relation("ReceiveInventory_Warehouse", references: [id], fields: [warehouseId])
+  receiveTransactions ReceiveTransaction[]  @relation("ReceiveInventory_Transaction")
+  receiveLandedCosts  ReceiveLandedCost[]   @relation("ReceiveInventory_LandedCost")
+  receiveHistories    ReceiveHistory[]      @relation("ReceiveInventory_History")
+  createUser          Employee              @relation("ReceiveInventory_CreateUser", references: [id], fields: [createUserId])
+  inventoryHistories  InventoryHistory[]    @relation("InventoryHistory_Receive")
+  tags                ReceiveInventoryTag[] @relation("receiveTags")
+  items               ReceiveItem[]         @relation("ReceiveItem_ReceiveInventory")
+
+  @@map("receive_inventory")
+}
+
+model ReceiveItem {
+  id               Int    @id @default(autoincrement())
+  quantity         Int
+  quantityAvaiable Int    @map("quantity_avaiable")
+  quantityReceived Int    @map("quantity_received")
+  quantityRemain   Int    @map("quantity_remain")
+  price            Int
+  total            Int
+  finalPrice       Int    @map("final_price")
+  finalTotal       Int    @map("final_total")
+  discountType     String @map("discount_type")
+  discountValue    Int    @map("discount_value")
+  discountAmount   Int    @map("discount_amount")
+  discountTotal    Int    @map("discount_total")
+  variantId        Int    @map("variant_id")
+  receiveId        Int    @map("receive_id")
+
+  variant          ProductVariants  @relation("ReceiveItem_Variant", references: [id], fields: [variantId])
+  receiveInventory ReceiveInventory @relation("ReceiveItem_ReceiveInventory", references: [id], fields: [receiveId])
+
+  @@unique([receiveId, variantId])
+  @@map("receive_item")
+}
+
+model ReceiveLandedCost {
+  id        Int    @id @default(autoincrement())
+  name      String
+  price     Int    @db.UnsignedInt
+  receiveId Int    @map("receive_id")
+
+  receiveInventory ReceiveInventory @relation("ReceiveInventory_LandedCost", references: [id], fields: [receiveId])
+
+  @@map("receive_landed_cost")
+}
+
+model ReceiveTransaction {
+  id            Int      @id @default(autoincrement())
+  amount        Int      @db.UnsignedInt
+  paymentMethod String   @map("payment_method")
+  processedAt   DateTime @map("processed_At")
+  createdAt     DateTime @default(now()) @map("created_at")
+  receiveId     Int      @map("receive_id")
+
+  receiveHistory   ReceiveHistory?  @relation("ReceiveHistory_Transaction")
+  receiveInventory ReceiveInventory @relation("ReceiveInventory_Transaction", references: [id], fields: [receiveId])
+
+  @@map("receive_transaction")
+}
+
+model ReceiveHistory {
+  id            Int      @id @default(autoincrement())
+  action        String
+  type          String
+  transactionId Int?     @unique @map("transaction_id")
+  changedUserId Int      @map("changed_user_id")
+  receiveId     Int      @map("receive_id")
+  // batchId       Int?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  changedUser        Employee            @relation("ReceiveHistory_ChangeUser", references: [id], fields: [changedUserId])
+  receiveTransaction ReceiveTransaction? @relation("ReceiveHistory_Transaction", references: [id], fields: [transactionId])
+  receiveInventory   ReceiveInventory    @relation("ReceiveInventory_History", references: [id], fields: [receiveId])
+
+  @@map("receive_history")
+}
+
+model ReceiveInventoryTag {
+  id        Int @id @default(autoincrement())
+  tagId     Int @map("tag_id")
+  receiveId Int @map("receive_id")
+
+  tag     Tag              @relation("tagReceive", references: [id], fields: [tagId])
+  receive ReceiveInventory @relation("receiveTags", references: [id], fields: [receiveId])
+
+  @@map("receive_inventory_tag")
+}
+
+model Discount {
+  id                          Int       @id @default(autoincrement())
+  type                        String
+  mode                        String
+  title                       String
+  value                       Int
+  valueLimitAmount            Int?      @map("value_limit_amount")
+  valueType                   String
+  entitle                     String
+  prerequisite                String
+  prerequisiteMinTotal        Int?      @map("prerequisite_min_total")
+  prerequisiteMinItem         Int?      @map("prerequisite_min_item")
+  prerequisiteMinItemTotal    Int?      @map("prerequisite_min_item_total")
+  usageLimit                  Int?      @map("usage_limit")
+  onePerCustomer              Boolean   @map("one_per_customer")
+  combinesWithProductDiscount Boolean   @map("combines_with_product_discount")
+  combinesWithOrderDiscount   Boolean   @map("combines_with_order_discount")
+  startOn                     DateTime  @map("start_on")
+  endOn                       DateTime? @map("end_on")
+  active                      Boolean
+  summary                     String    @db.MediumText
+  applyFor                    String    @map("apply_for")
+  usage                       Int?      @default(0)
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt
+  createdUserId               Int
+  void                        Boolean   @default(false)
+
+  createdUser Employee @relation("DiscountCreatedUser", fields: [createdUserId], references: [id])
+  // prerequisiteCustomerGroupIds Int[]
+}
+
+model DiscountProduct {
+  productId  Int @map("product_id")
+  discountId Int @map("discount_id")
+
+  // product Product @relation("DiscountProduct")
+
+  @@id([productId, discountId])
+}
+
+model DiscountVariant {
+  variantId  Int @map("variant_id")
+  discountId Int @map("discount_id")
+
+  @@id([variantId, discountId])
+}
+
+model DiscountCategory {
+  categoryId Int @map("category_id")
+  discountId Int @map("discount_id")
+
+  @@id([categoryId, discountId])
+}
+
+model Customer {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  password     String
+  gender       String
+  dob          DateTime  @db.Date
+  createAt     DateTime  @default(now()) @map("create_at")
+  updateAt     DateTime  @updatedAt @map("update_at")
+  lastModifyAt DateTime  @default(now()) @map("last_modify_at")
+  lastLoginAt  DateTime? @map("last_login_at")
+}
+
+model CustomerVerify {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  gender    String
+  dob       DateTime @db.Date
+  otp       String
+  otpExpiry DateTime
+  isVerify  Boolean  @default(false)
+  attemps   Int      @default(0)
+  createAt  DateTime @default(now())
+
+  @@map("customer_verify")
 }
