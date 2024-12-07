@@ -11,12 +11,15 @@ import { InventoriesModule } from './modules/inventories/inventories.module';
 import { ReceiveInventoryModule } from './modules/receive-inventory/receive-inventory.module';
 import { DiscountModule } from './modules/discount/discount.module';
 import { MailModule } from './modules/mail/mail.module';
+import { CartModule } from './modules/cart/cart.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     EmployeesModule,
     ProductModule,
@@ -28,6 +31,7 @@ import { MailModule } from './modules/mail/mail.module';
     ReceiveInventoryModule,
     DiscountModule,
     MailModule,
+    CartModule,
   ],
   controllers: [],
   providers: [],

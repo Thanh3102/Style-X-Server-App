@@ -19,6 +19,7 @@ import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { Response } from 'express';
 import { QueryParams } from 'src/utils/types';
 import { isInteger } from 'src/utils/helper/StringHelper';
+import { Public } from 'src/decorators/Public.decorator';
 
 @UseGuards(JwtGuard)
 @UseInterceptors(LoggerInterceptor)

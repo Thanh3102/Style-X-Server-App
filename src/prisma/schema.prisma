@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["omitApi"]
 }
 
 datasource db {
@@ -26,12 +27,11 @@ model Employee {
 
   creator                 Employee?          @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
   createdEmployees        Employee[]         @relation("EmployeeCreator")
-  createdCategory         Category[]         @relation("category_creator")
   lastUpdateSuppliers     Supplier[]         @relation("supplierLastUpdateUser")
   createdSuppliers        Supplier[]         @relation("supplierCreatedUser")
   deletedSuppliers        Supplier[]         @relation("supplierDeletedUser")
   assignedSuppliers       Supplier[]         @relation("supplierAssigned")
-  createdWarehouse        Warehouse[]        @relation("createdWarehouseUser")
+  createdWarehouses       Warehouse[]        @relation("createdWarehouseUser")
   updatedWarehouse        Warehouse[]        @relation("updatedWarehouseUser")
   createdProduct          Product[]          @relation("ProductCreater")
   updatedProduct          Product[]          @relation("ProductUpdater")
@@ -45,16 +45,31 @@ model Employee {
 
 model Category {
   id            Int      @id @default(autoincrement())
-  title         String   @unique
-  slug          String?  @unique
+  title         String
+  slug          String?
+  image         String?
+  imagePublicId String?  @map("image_public_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
-  createdUserId Int?     @map("created_user_id")
+  collectionId  Int      @default(1) @map("collection_id")
 
-  createdUser     Employee?         @relation("category_creator", fields: [createdUserId], references: [id])
-  productCategory ProductCategory[] @relation("ProductCategory_Category")
+  collection         Collection         @relation("Category_Collection", references: [id], fields: [collectionId])
+  categories         ProductCategory[]  @relation("ProductCategory_Category")
+  discountCategories DiscountCategory[] @relation("DiscountCategory_Category")
 
+  @@unique([collectionId, title, slug])
   @@map("categories")
+}
+
+model Collection {
+  id       Int     @id @default(autoincrement())
+  title    String  @unique
+  slug     String? @unique
+  position Int
+
+  categories Category[] @relation("Category_Collection")
+
+  @@map("collections")
 }
 
 model Product {
@@ -85,6 +100,9 @@ model Product {
   tags              ProductTag[]        @relation("productTag")
   variants          ProductVariants[]   @relation("ProductVariants")
   productCategories ProductCategory[]   @relation("ProductCategory_Product")
+  discountProducts  DiscountProduct[]   @relation("DiscountProduct_Product")
+  cartItems         CartItem[]          @relation("CartItem_Product")
+  guestCartItems    GuestCartItem[]     @relation("GuestCartItem_Product")
 
   @@map("products")
 }
@@ -131,9 +149,12 @@ model ProductVariants {
   productId    Int      @map("product_id")
   image        String?
 
-  inventories  Inventory[]   @relation("InventoryProductVariant")
-  product      Product       @relation("ProductVariants", references: [id], fields: [productId])
-  receiveItems ReceiveItem[] @relation("ReceiveItem_Variant")
+  inventories      Inventory[]       @relation("InventoryProductVariant")
+  product          Product           @relation("ProductVariants", references: [id], fields: [productId])
+  receiveItems     ReceiveItem[]     @relation("ReceiveItem_Variant")
+  discountVariants DiscountVariant[] @relation("DiscountVariant_ProductVariant")
+  cartItems        CartItem[]        @relation("CartItem_Variant")
+  guestCartItems   GuestCartItem[]   @relation("GuestCartItem_Variant")
 
   // @@unique([title, ])
   @@map("product_variants")
@@ -415,6 +436,7 @@ model Discount {
   type                        String
   mode                        String
   title                       String
+  description                 String?
   value                       Int
   valueLimitAmount            Int?      @map("value_limit_amount")
   valueType                   String
@@ -438,7 +460,11 @@ model Discount {
   createdUserId               Int
   void                        Boolean   @default(false)
 
-  createdUser Employee @relation("DiscountCreatedUser", fields: [createdUserId], references: [id])
+  createdUser       Employee           @relation("DiscountCreatedUser", fields: [createdUserId], references: [id])
+  entitleProducts   DiscountProduct[]  @relation("DiscountProduct")
+  entitleVariants   DiscountVariant[]  @relation("DiscountVariant")
+  entitleCategories DiscountCategory[] @relation("DiscountCategory")
+
   // prerequisiteCustomerGroupIds Int[]
 }
 
@@ -447,22 +473,33 @@ model DiscountProduct {
   discountId Int @map("discount_id")
 
   // product Product @relation("DiscountProduct")
+  discount Discount @relation("DiscountProduct", references: [id], fields: [discountId])
+  product  Product  @relation("DiscountProduct_Product", references: [id], fields: [productId])
 
   @@id([productId, discountId])
+  @@map("discount_product")
 }
 
 model DiscountVariant {
   variantId  Int @map("variant_id")
   discountId Int @map("discount_id")
 
+  discount Discount        @relation("DiscountVariant", references: [id], fields: [discountId])
+  variant  ProductVariants @relation("DiscountVariant_ProductVariant", references: [id], fields: [variantId])
+
   @@id([variantId, discountId])
+  @@map("discount_variant")
 }
 
 model DiscountCategory {
   categoryId Int @map("category_id")
   discountId Int @map("discount_id")
 
+  discount Discount @relation("DiscountCategory", references: [id], fields: [discountId])
+  category Category @relation("DiscountCategory_Category", references: [id], fields: [categoryId])
+
   @@id([categoryId, discountId])
+  @@map("discount_category")
 }
 
 model Customer {
@@ -476,6 +513,8 @@ model Customer {
   updateAt     DateTime  @updatedAt @map("update_at")
   lastModifyAt DateTime  @default(now()) @map("last_modify_at")
   lastLoginAt  DateTime? @map("last_login_at")
+
+  cart Cart? @relation("Customer_Cart")
 }
 
 model CustomerVerify {
@@ -492,4 +531,63 @@ model CustomerVerify {
   createAt  DateTime @default(now())
 
   @@map("customer_verify")
+}
+
+model Cart {
+  id         Int    @id @default(autoincrement())
+  customerId String @unique @map("customer_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  customer Customer   @relation("Customer_Cart", references: [id], fields: [customerId])
+  items    CartItem[] @relation("CartItem_Cart")
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int      @map("cart_id")
+  productId Int      @map("product_id")
+  variantId Int      @map("variant_id")
+  quantity  Int      @db.UnsignedInt
+  selected  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cart    Cart            @relation("CartItem_Cart", references: [id], fields: [cartId])
+  product Product         @relation("CartItem_Product", references: [id], fields: [productId])
+  variant ProductVariants @relation("CartItem_Variant", references: [id], fields: [variantId])
+
+  @@unique([cartId, productId, variantId])
+  @@map("cart_item")
+}
+
+model GuestCart {
+  id String @id @default(uuid())
+
+  expires   DateTime
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items GuestCartItem[] @relation("GuestCartItem_GuestCart")
+
+  @@map("guest_cart")
+}
+
+model GuestCartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    String   @map("cart_id")
+  productId Int      @map("product_id")
+  variantId Int      @map("variant_id")
+  quantity  Int      @db.UnsignedInt
+  selected  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  cart    GuestCart       @relation("GuestCartItem_GuestCart", references: [id], fields: [cartId])
+  product Product         @relation("GuestCartItem_Product", references: [id], fields: [productId])
+  variant ProductVariants @relation("GuestCartItem_Variant", references: [id], fields: [variantId])
+
+  @@unique([cartId, productId, variantId])
+  @@map("guest_cart_item")
 }

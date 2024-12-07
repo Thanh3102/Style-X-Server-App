@@ -14,6 +14,8 @@ export enum FilterParam {
 
 export type QueryParams = Partial<Record<FilterParam, string>>;
 
+
+
 export enum DateFilterOptionValue {
   TODAY = 'today',
   YESTERDAY = 'yesterday',

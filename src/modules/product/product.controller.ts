@@ -20,6 +20,7 @@ import { JwtGuard } from 'src/guards/jwt.guard';
 import {
   CreateCategoryDTO,
   CreateProductDTO,
+  UpdateCategoryDTO,
   UpdateProductDTO,
   UpdateVariantDTO,
 } from './product.dto';
@@ -28,6 +29,8 @@ import { QueryParams } from 'src/utils/types';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { isInteger } from 'src/utils/helper/StringHelper';
+import { Public } from 'src/decorators/Public.decorator';
+import { CreateCollectionDTO, PublicProductParams } from './product';
 
 @UseGuards(JwtGuard)
 @UseInterceptors(LoggerInterceptor)
@@ -35,35 +38,106 @@ import { isInteger } from 'src/utils/helper/StringHelper';
 export class ProductController {
   constructor(private productService: ProductService) {}
 
+  @Public()
+  @Get('/public')
+  getProductPublic(@Query() queryParams: PublicProductParams, @Res() res) {
+    return this.productService.fetchProductPublic(queryParams, res);
+  }
+
+  @Public()
+  @Get('/public/search')
+  getProductPublicSearch(@Query("q") query: string, @Res() res) {
+    return this.productService.searchProductPublic(query, res);
+  }
+
+  @Public()
+  @Get('/collection')
+  getCollection(@Res() res: Response) {
+    return this.productService.getCollection(res);
+  }
+
+  @Public()
+  @Get('/public/collection/:slug')
+  getCollectionDetail(@Param('slug') slug: string, @Res() res) {
+    return this.productService.getCollectionDetail(slug, res);
+  }
+
+  @Public()
+  @Get('/public/:id')
+  getProductDetailPublic(@Param('id') id: string, @Res() res: Response) {
+    if (!isInteger(id))
+      return res.status(400).json({ message: 'Sản phẩm không tồn tại' });
+    return this.productService.fetchProductDetailPublic(parseInt(id), res);
+  }
+
+  @Public()
   @Get('/category')
   getCategory(@Query() queryParams: QueryParams) {
     return this.productService.getCategories(queryParams);
   }
 
-  @Get("/variant/:variantId")
-  getVariantDetail(@Param("variantId") variantId: string){
-    if(!isInteger(variantId)) throw new BadRequestException("Mã phiên bản không hợp lệ")
-    return this.productService.getVariantDetail(parseInt(variantId))
+  @Get('/variant/:variantId')
+  getVariantDetail(@Param('variantId') variantId: string) {
+    if (!isInteger(variantId))
+      throw new BadRequestException('Mã phiên bản không hợp lệ');
+    return this.productService.getVariantDetail(parseInt(variantId));
   }
 
-  @Post('/createCategory')
+  @Post('/category')
+  @UseInterceptors(FileInterceptor('image'))
   createCategories(
+    @UploadedFile() image: Express.Multer.File,
     @Body() dto: CreateCategoryDTO,
     @Req() req,
     @Res() res: Response,
   ) {
-    // return this.productService.createCategories(dto, req, res);
-    return null;
+    return this.productService.createCategory(
+      {
+        ...dto,
+        image,
+      },
+      req,
+      res,
+    );
   }
 
-  @Put('/updateCategory')
-  updateCategory() {
-    return null;
+  @Post('/category/update')
+  @UseInterceptors(FileInterceptor('image'))
+  updateCategory(
+    @UploadedFile() image: Express.Multer.File,
+    @Body() dto: UpdateCategoryDTO,
+    @Req() req,
+    @Res() res: Response,
+  ) {
+    return this.productService.updateCategory({ ...dto, image }, req, res);
   }
 
-  @Delete('/deleteCategory')
-  deleteCategory() {
-    return null;
+  @Delete('/category/:id')
+  deleteCategory(@Param('id') id: string, @Res() res: Response) {
+    return this.productService.deleteCategory(parseInt(id), res);
+  }
+
+  @Post('/collection')
+  createCollection(
+    @Body() dto: CreateCollectionDTO,
+    @Req() req,
+    @Res() res: Response,
+  ) {
+    return this.productService.createCollection(dto, req, res);
+  }
+
+  @Put('/collection')
+  updateCollection(
+    @Body() dto: UpdateCategoryDTO,
+    @Req() req,
+    @Res() res: Response,
+  ) {
+    return this.productService.updateCollection(dto, req, res);
+  }
+
+  @Delete('/collection/:id')
+  deleteCollection(@Param('id') id: string, @Res() res: Response) {
+    return this.productService.deleteCollection(parseInt(id), res);
   }
 
   @Put('/images/updateMainImage')

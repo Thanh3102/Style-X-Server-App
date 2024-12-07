@@ -1,7 +1,10 @@
+import { DiscountService } from './discount.service';
+
 export type CreateDiscountDTO = {
   type: string;
   mode: string;
   title: string;
+  description: string;
   value: number;
   valueLimitAmount: number | null;
   valueType: string;
@@ -26,8 +29,9 @@ export type CreateDiscountDTO = {
 };
 
 export type UpdateDiscountDTO = {
-  id: number,
+  id: number;
   title: string;
+  description: string;
   value: number;
   valueLimitAmount: number | null;
   valueType: string;
@@ -49,3 +53,7 @@ export type UpdateDiscountDTO = {
   entitledCategoriesIds: number[];
   applyFor: string;
 };
+
+export type ActiveDiscount = Awaited<
+  ReturnType<typeof DiscountService.prototype.getActiveDiscounts>
+>[number];

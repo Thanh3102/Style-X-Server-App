@@ -1,3 +1,5 @@
+import { ProductService } from './product.service';
+
 export type Warehouse = {
   id: number;
   name: string;
@@ -48,6 +50,26 @@ export type CreateProductDTO = {
 export type CreateCategoryDTO = {
   title: string;
   slug: string;
+  image: Express.Multer.File | undefined | null;
+  collectionId: string;
+};
+
+export type UpdateCategoryDTO = {
+  id: string;
+  title: string;
+  slug: string;
+  image: Express.Multer.File | undefined | null;
+};
+
+export type CreateCollectionDTO = {
+  title: string;
+  slug: string;
+};
+
+export type UpdateCollectionDTO = {
+  id: string;
+  title: string;
+  slug: string;
 };
 
 export type UpdateMainImageDTO = {
@@ -66,9 +88,12 @@ export type UpdateProductDTO = {
   shortDescription: undefined;
   type: string | undefined;
   vendor: string | undefined;
-}
+  sellPrice: number;
+  costPrice: number;
+  comparePrice: number;
+};
 
-export class UpdateVariantDTO {
+export type UpdateVariantDTO = {
   variantId: number;
   barCode: string | undefined;
   comparePrice: number | undefined;
@@ -76,4 +101,26 @@ export class UpdateVariantDTO {
   sellPrice: number | undefined;
   skuCode: string | undefined;
   unit: string | undefined;
-}
+};
+
+export type PublicProductParams = {
+  page?: string;
+  limit?: string;
+  query?: string;
+  category?: string;
+  slug?: string;
+  sort?: string;
+  priceRange?: string;
+};
+
+export type ProductPublic = Awaited<
+  ReturnType<typeof ProductService.prototype.getProductPublic>
+>[number];
+
+export type ProductDetailPublic = Awaited<
+  ReturnType<typeof ProductService.prototype.getProductDetailPublic>
+>;
+
+export type ProductPublicVariant = Awaited<
+  ReturnType<typeof ProductService.prototype.getProductPublicVariants>
+>[number];

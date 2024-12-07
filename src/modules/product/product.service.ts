@@ -6,7 +6,11 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   CreateCategoryDTO,
+  CreateCollectionDTO,
   CreateProductDTO,
+  PublicProductParams,
+  UpdateCategoryDTO,
+  UpdateCollectionDTO,
   UpdateProductDTO,
   UpdateVariantDTO,
 } from './product';
@@ -20,6 +24,9 @@ import { TagType } from '../tags/tag.type';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { InventoriesService } from '../inventories/inventories.service';
+import { isInteger } from 'src/utils/helper/StringHelper';
+import { DiscountService } from '../discount/discount.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductService {
@@ -27,6 +34,7 @@ export class ProductService {
     private prisma: PrismaService,
     private cloudinary: CloudinaryService,
     private inventoriesService: InventoriesService,
+    private discountService: DiscountService,
   ) {}
 
   private tagType = TagType.PRODUCT;
@@ -55,7 +63,7 @@ export class ProductService {
     if (product.void) throw new Error('Sản phẩm đã bị xóa');
   };
 
-  private getInventoryStock = async (productId: number) => {
+  public getInventoryStock = async (productId: number) => {
     const result = await this.prisma.inventory.aggregate({
       _sum: {
         avaiable: true,
@@ -73,7 +81,7 @@ export class ProductService {
     return result._sum;
   };
 
-  private getVariantInventoryStock = async (variantId: number) => {
+  public getVariantInventoryStock = async (variantId: number) => {
     const result = await this.prisma.inventory.aggregate({
       _sum: {
         avaiable: true,
@@ -89,7 +97,7 @@ export class ProductService {
     return result._sum;
   };
 
-  private getProductOptions = async (productId: number) => {
+  public getProductOptions = async (productId: number, short?: boolean) => {
     const productProperties = await this.prisma.productProperties.findMany({
       where: {
         productId: productId,
@@ -108,6 +116,17 @@ export class ProductService {
         position: 'asc',
       },
     });
+
+    if (short) {
+      const options = productProperties.map((pp) => {
+        return {
+          name: pp.name,
+          values: pp.values.map((v) => v.value),
+        };
+      });
+
+      return options;
+    }
 
     const options = productProperties.map((pp) => {
       return {
@@ -129,6 +148,7 @@ export class ProductService {
         publicId: true,
       },
     });
+
     return productImages;
   };
 
@@ -171,6 +191,55 @@ export class ProductService {
     return productVariants;
   };
 
+  public getProductPublicVariants = async (productId: number) => {
+    const productVariants = await this.prisma.productVariants.findMany({
+      where: {
+        productId: productId,
+        void: false,
+      },
+      select: {
+        id: true,
+        title: true,
+        comparePrice: true,
+        sellPrice: true,
+        unit: true,
+        option1: true,
+        option2: true,
+        option3: true,
+        image: true,
+        inventories: {
+          select: {
+            avaiable: true,
+          },
+        },
+      },
+    });
+    const activeProductPromotions =
+      await this.discountService.getActiveDiscounts({
+        mode: ['promotion'],
+        type: ['product'],
+      });
+    const tranformProductVariants = [];
+
+    for (const variant of productVariants) {
+      const { inventories, ...returnData } = variant;
+      const avaiable = variant.inventories.reduce(
+        (total, i) => total + i.avaiable,
+        0,
+      );
+      const discountInfo = await this.discountService.calcVariantDiscount(
+        variant,
+        activeProductPromotions,
+      );
+      tranformProductVariants.push({
+        ...returnData,
+        ...discountInfo,
+        avaiable,
+      });
+    }
+    return tranformProductVariants;
+  };
+
   private getProductCategories = async (productId: number) => {
     const productCategories = await this.prisma.productCategory.findMany({
       where: {
@@ -181,6 +250,7 @@ export class ProductService {
           select: {
             id: true,
             title: true,
+            collection: true,
           },
         },
       },
@@ -190,6 +260,7 @@ export class ProductService {
       return {
         id: pcat.category.id,
         title: pcat.category.title,
+        collection: pcat.category.collection,
       };
     });
 
@@ -585,7 +656,7 @@ export class ProductService {
             });
           }
 
-          // Tạo variant
+          // Tạo variant và kho
           if (dto.variants.length === 0) {
             const defaultVariant = await p.productVariants.create({
               data: {
@@ -766,35 +837,306 @@ export class ProductService {
   }
 
   async createCategory(dto: CreateCategoryDTO, req, res: Response) {
-    // Check if title is exist
-    const isTitleExist = await this.prisma.category.findUnique({
-      where: {
-        title: dto.title,
-      },
-      select: {
-        id: true,
-      },
-    });
+    try {
+      const isTitleExist = await this.prisma.category.findFirst({
+        where: {
+          title: dto.title,
+          collectionId: parseInt(dto.collectionId),
+        },
+      });
 
-    if (isTitleExist) throw new BadRequestException('Tiêu đề đã tồn tại');
+      if (isTitleExist)
+        return res.status(400).json({ message: 'Tiêu đề đã tồn tại' });
 
-    // Create new category
-    const category = await this.prisma.category.create({
-      data: {
-        title: dto.title,
-        slug: dto.slug,
-      },
-    });
+      const isSlugExist = await this.prisma.category.findFirst({
+        where: {
+          slug: dto.slug,
+          collectionId: parseInt(dto.collectionId),
+        },
+      });
 
-    return res.status(200).json({ data: category });
+      if (isSlugExist)
+        return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
+
+      await this.prisma.$transaction(
+        async (p) => {
+          const createdCategory = await p.category.create({
+            data: {
+              title: dto.title,
+              slug: dto.slug,
+              collectionId: parseInt(dto.collectionId),
+            },
+          });
+
+          if (dto.image) {
+            const { secure_url, public_id } = await this.cloudinary.uploadFile(
+              dto.image,
+            );
+
+            await p.category.update({
+              where: {
+                id: createdCategory.id,
+              },
+              data: {
+                image: secure_url,
+                imagePublicId: public_id,
+              },
+            });
+          }
+        },
+        {
+          maxWait: 10000,
+          timeout: 10000,
+        },
+      );
+
+      return res.status(200).json({ message: 'Tạo danh mục thành công' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
   }
 
-  async updateCategory(dto, req, res: Response) {
-    return null;
+  async updateCategory(dto: UpdateCategoryDTO, req, res: Response) {
+    try {
+      const isTitleExist = await this.prisma.category.findFirst({
+        where: {
+          title: dto.title,
+          id: {
+            not: parseInt(dto.id),
+          },
+        },
+      });
+
+      if (isTitleExist)
+        return res.status(400).json({ message: 'Tiêu đề đã tồn tại' });
+
+      const isSlugExist = await this.prisma.category.findFirst({
+        where: {
+          slug: dto.slug,
+          id: {
+            not: parseInt(dto.id),
+          },
+        },
+      });
+
+      if (isSlugExist)
+        return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
+
+      await this.prisma.$transaction(
+        async (p) => {
+          const updatedCategory = await p.category.update({
+            where: {
+              id: parseInt(dto.id),
+            },
+            data: {
+              title: dto.title,
+              slug: dto.slug,
+            },
+          });
+
+          if (dto.image) {
+            await this.cloudinary.deleteFile(updatedCategory.imagePublicId);
+            const { secure_url, public_id } = await this.cloudinary.uploadFile(
+              dto.image,
+            );
+
+            await p.category.update({
+              where: {
+                id: updatedCategory.id,
+              },
+              data: {
+                image: secure_url,
+                imagePublicId: public_id,
+              },
+            });
+          }
+        },
+        {
+          maxWait: 10000,
+          timeout: 10000,
+        },
+      );
+
+      return res.status(200).json({ message: 'Cập nhật danh mục thành công' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
   }
 
-  async deleteCategory(dto, req, res: Response) {
-    return null;
+  async deleteCategory(id: number, res: Response) {
+    try {
+      await this.prisma.$transaction(async (p) => {
+        await p.productCategory.deleteMany({
+          where: {
+            categoryId: id,
+          },
+        });
+
+        const deleteCategory = await p.category.delete({
+          where: {
+            id: id,
+          },
+        });
+
+        await this.cloudinary.deleteFile(deleteCategory.imagePublicId);
+      });
+      return res.json({ message: 'Đã xóa danh mục' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async getCollection(res: Response) {
+    try {
+      const collections = await this.prisma.collection.findMany({
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          categories: {
+            select: {
+              id: true,
+              image: true,
+              title: true,
+              slug: true,
+            },
+          },
+        },
+        orderBy: {
+          title: 'desc',
+        },
+      });
+      return res.status(200).json(collections);
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async createCollection(dto: CreateCollectionDTO, req, res: Response) {
+    try {
+      const collections = await this.prisma.collection.findMany();
+      if (collections.length >= 5)
+        return res
+          .status(400)
+          .json({ message: 'Số lượng bộ sưu tập đã đạt tối đa' });
+
+      const isTitleExist = await this.prisma.collection.findUnique({
+        where: {
+          title: dto.title,
+        },
+      });
+
+      if (isTitleExist)
+        return res.status(400).json({ message: 'Tiêu đề đã tồn tại' });
+
+      const isSlugExist = await this.prisma.collection.findUnique({
+        where: {
+          slug: dto.slug,
+        },
+      });
+
+      if (isSlugExist)
+        return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
+
+      const { _max } = await this.prisma.collection.aggregate({
+        _max: {
+          position: true,
+        },
+      });
+
+      const createdCollection = await this.prisma.collection.create({
+        data: {
+          title: dto.title,
+          slug: dto.slug,
+          position: _max.id ? _max.id + 1 : 1,
+        },
+      });
+
+      return res.status(200).json({ message: 'Thêm thành công' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async updateCollection(dto: UpdateCollectionDTO, req, res: Response) {
+    try {
+      const isTitleExist = await this.prisma.collection.findFirst({
+        where: {
+          title: dto.title,
+          id: {
+            not: parseInt(dto.id),
+          },
+        },
+      });
+
+      if (isTitleExist)
+        return res.status(400).json({ message: 'Tiêu đề đã tồn tại' });
+
+      const isSlugExist = await this.prisma.collection.findFirst({
+        where: {
+          slug: dto.slug,
+          id: {
+            not: parseInt(dto.id),
+          },
+        },
+      });
+
+      if (isSlugExist)
+        return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
+
+      const updatedCategory = await this.prisma.collection.update({
+        where: {
+          id: parseInt(dto.id),
+        },
+        data: {
+          title: dto.title,
+          slug: dto.slug,
+        },
+      });
+
+      return res.status(200).json({ message: 'Cập nhật thành công' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async deleteCollection(id: number, res: Response) {
+    try {
+      await this.prisma.$transaction(async (p) => {
+        const deleteCollection = await p.collection.delete({
+          where: {
+            id: id,
+          },
+        });
+
+        const collections = await this.prisma.collection.findMany();
+
+        for (const collection of collections) {
+          if (collection.position > deleteCollection.position) {
+            await this.prisma.collection.update({
+              where: {
+                id: collection.id,
+              },
+              data: {
+                position: {
+                  decrement: 1,
+                },
+              },
+            });
+          }
+        }
+      });
+      return res.json({ message: 'Đã xóa bộ sưu tập' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
   }
 
   async getCategories(queryParams: QueryParams) {
@@ -821,6 +1163,8 @@ export class ProductService {
         id: true,
         title: true,
         slug: true,
+        image: true,
+        collection: true,
       },
       where: whereCondition,
       orderBy: {
@@ -905,20 +1249,23 @@ export class ProductService {
   ) {
     const uploadedPublicId = [];
     try {
-      await this.prisma.$transaction(async (p) => {
-        for (const img of images) {
-          const result = await this.cloudinary.uploadFile(img);
-          await p.productImages.create({
-            data: {
-              url: result.secure_url,
-              publicId: result.public_id,
-              assetId: result.asset_id,
-              bytes: img.size,
-              productId: productId,
-            },
-          });
-        }
-      });
+      await this.prisma.$transaction(
+        async (p) => {
+          for (const img of images) {
+            const result = await this.cloudinary.uploadFile(img);
+            await p.productImages.create({
+              data: {
+                url: result.secure_url,
+                publicId: result.public_id,
+                assetId: result.asset_id,
+                bytes: img.size,
+                productId: productId,
+              },
+            });
+          }
+        },
+        { maxWait: 60000, timeout: 60000 },
+      );
 
       return res.status(200).json({ message: 'Thêm ảnh thành công' });
     } catch (error) {
@@ -950,6 +1297,9 @@ export class ProductService {
               type: dto.type,
               vendor: dto.vendor,
               updatedUserId: updateUserId,
+              sellPrice: dto.sellPrice,
+              comparePrice: dto.comparePrice,
+              costPrice: dto.comparePrice,
             },
           });
           // Update product category
@@ -1069,4 +1419,307 @@ export class ProductService {
       );
     }
   }
+
+  private tranformPublicProductParamsToQuery = async (
+    params: PublicProductParams,
+  ) => {
+    const { query, category, slug, sort, priceRange } = params;
+    let where: Prisma.ProductWhereInput = {
+      avaiable: true,
+    };
+    let orderBy: Prisma.ProductOrderByWithRelationInput = {};
+
+    if (query) {
+      where.name = {
+        startsWith: query,
+      };
+    }
+
+    if (slug) {
+      where.productCategories = where.productCategories || {};
+      where.productCategories.some = where.productCategories.some || {};
+      where.productCategories.some.category =
+        where.productCategories.some.category || {};
+
+      where.productCategories.some.category.collection =
+        where.productCategories.some.category.collection || {};
+      where.productCategories.some.category.collection.slug = slug;
+    }
+
+    if (category) {
+      where.productCategories = where.productCategories || {};
+      where.productCategories.some = where.productCategories.some || {};
+      where.productCategories.some.category =
+        where.productCategories.some.category || {};
+
+      where.productCategories.some.category.slug = category;
+    }
+
+    // if (priceRange) {
+    //   const [min, max] = priceRange.split('-');
+    //   const maxValue = isInteger(max) ? parseInt(max) : 1e12;
+    //   const minValue = isInteger(min) ? parseInt(min) : 0;
+
+    //   where.sellPrice = {
+    //     gte: minValue,
+    //     lte: maxValue,
+    //   };
+    // }
+
+    console.log('Where', where);
+
+    return { where, orderBy };
+  };
+
+  async getProductPublic(
+    where: Prisma.ProductWhereInput,
+    order: Prisma.ProductOrderByWithRelationInput,
+    skip: number,
+    take: number,
+  ) {
+    try {
+      const basicProducts = await this.prisma.product.findMany({
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          // sellPrice: true,
+          // comparePrice: true,
+          createdAt: true,
+          updatedAt: true,
+          productCategories: {
+            select: {
+              categoryId: true,
+            },
+          },
+        },
+        where: where,
+        orderBy: order,
+        take: take,
+        skip: skip,
+      });
+
+      return basicProducts;
+    } catch (error) {
+      console.log(error);
+      throw new Error(error);
+    }
+  }
+
+  async fetchProductPublic(params: PublicProductParams, res: Response) {
+    try {
+      const { page: pg, limit: lim, priceRange } = params;
+
+      let page = 1;
+      let limit = 20;
+
+      if (isInteger(pg)) page = parseInt(pg);
+      if (isInteger(lim)) limit = parseInt(lim);
+
+      const skip = page === 1 ? 0 : (page - 1) * limit;
+
+      const { where, orderBy } =
+        await this.tranformPublicProductParamsToQuery(params);
+
+      const basicProducts = await this.getProductPublic(
+        where,
+        orderBy,
+        skip,
+        limit,
+      );
+
+      const products = [];
+
+      // const activeProductPromotions =
+      //   await this.discountService.getActiveDiscounts('promotion', 'product');
+
+      for (const product of basicProducts) {
+        const { productCategories, ...rest } = product;
+        // Lấy các thông tin về tùy chọn, danh mục, phiên bản
+        const categoryIds = productCategories.map((item) => item.categoryId);
+        const options = await this.getProductOptions(product.id);
+        const variants = await this.getProductPublicVariants(product.id);
+
+        // const { discountPrice, applyPromotions } =
+        //   await this.discountService.calcProductDiscount(
+        //     product,
+        //     activeProductPromotions,
+        //   );
+
+        products.push({
+          ...rest,
+          categoryIds,
+          options,
+          variants: variants,
+        });
+      }
+
+      const count = await this.prisma.product.count({
+        where: where,
+      });
+
+      const totalPage = Math.floor(count / limit);
+
+      return res.status(200).json({
+        data: products,
+        total: count,
+        limit: limit,
+        currentPage: page,
+        lastPage: count % limit == 0 ? totalPage : totalPage + 1,
+      });
+    } catch (e) {
+      console.log(e);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async getProductDetailPublic(id: number) {
+    const product = await this.prisma.product.findUnique({
+      where: {
+        id: id,
+        avaiable: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        skuCode: true,
+        comparePrice: true,
+        sellPrice: true,
+        type: true,
+        unit: true,
+        description: true,
+        shortDescription: true,
+        image: true,
+        productCategories: true,
+      },
+    });
+    const options = await this.getProductOptions(product.id);
+    const images = await this.getProductImages(product.id);
+    const variants = await this.getProductPublicVariants(product.id);
+
+    return { ...product, options, images, variants };
+  }
+
+  async fetchProductDetailPublic(id: number, res: Response) {
+    try {
+      await this.checkValidProductId(id);
+
+      const product = await this.getProductDetailPublic(id);
+
+      const sameCategoryBasicProduct = await this.getProductPublic(
+        {
+          void: false,
+          avaiable: true,
+          id: {
+            not: id,
+          },
+          productCategories: {
+            some: {
+              categoryId: {
+                in: product.productCategories.map((item) => item.categoryId),
+              },
+            },
+          },
+        },
+        {},
+        0,
+        24,
+      );
+
+      const sameCategoryProduct = [];
+
+      // const activeProductPromotions =
+      //   await this.discountService.getActiveDiscounts('promotion', 'product');
+
+      for (const product of sameCategoryBasicProduct) {
+        const { productCategories, ...rest } = product;
+        // Lấy các thông tin về tùy chọn, danh mục, phiên bản
+        const categoryIds = productCategories.map((item) => item.categoryId);
+        const options = await this.getProductOptions(product.id);
+        const variants = await this.getProductPublicVariants(product.id);
+
+        // const { discountPrice, applyPromotions } =
+        //   await this.discountService.calcProductDiscount(
+        //     product,
+        //     activeProductPromotions,
+        //   );
+
+        sameCategoryProduct.push({
+          ...rest,
+          categoryIds,
+          options,
+          variants: variants,
+        });
+      }
+
+      return res.status(200).json({
+        ...product,
+        sameCategoryProducts: sameCategoryProduct,
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ error: error.message ?? 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async getCollectionDetail(slug: string, res: Response) {
+    try {
+      const collection = await this.prisma.collection.findUnique({
+        where: {
+          slug: slug,
+        },
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          categories: {
+            select: {
+              id: true,
+              slug: true,
+              image: true,
+              title: true,
+            },
+          },
+        },
+      });
+
+      return res.status(200).json(collection);
+    } catch (error) {
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async searchProductPublic(query: string, res: Response) {
+    try {
+      const products = await this.getProductPublic(
+        {
+          name: {
+            startsWith: query,
+          },
+        },
+        { name: 'asc' },
+        undefined,
+        undefined,
+      );
+
+      const categories = await this.prisma.category.findMany({
+        where: {
+          title: {
+            startsWith: query,
+          },
+        },
+        include: {
+          collection: true,
+        },
+      });
+
+      return res
+        .status(200)
+        .json({ products: products, categories: categories });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
 }

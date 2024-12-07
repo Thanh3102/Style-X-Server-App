@@ -240,6 +240,9 @@ export class AuthService {
               dob: customerVerify.dob,
               email: customerVerify.email,
               gender: customerVerify.gender,
+              cart: {
+                create: {},
+              },
             },
           });
 
