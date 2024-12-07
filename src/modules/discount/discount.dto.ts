@@ -2,6 +2,7 @@ export class CreateDiscountDTO {
   type: string;
   mode: string;
   title: string;
+  description: string;
   value: number;
   valueLimitAmount: number | null;
   valueType: string;
@@ -28,6 +29,7 @@ export class CreateDiscountDTO {
 export class UpdateDiscountDTO {
   id: number;
   title: string;
+  description: string;
   value: number;
   valueLimitAmount: number | null;
   valueType: string;

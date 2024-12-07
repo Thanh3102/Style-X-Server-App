@@ -95,9 +95,15 @@ export class CreateCategoryDTO {
   @IsString()
   slug: string;
 
-  @IsOptional()
-  @IsNumber()
-  parentId?: number;
+  collectionId: string;
+}
+
+export class UpdateCategoryDTO {
+  id: string;
+  title: string;
+  slug: string;
+  image: Express.Multer.File | undefined | null;
+  collectionId: number;
 }
 
 export class CreateProductDataDTO {
@@ -190,6 +196,9 @@ export class UpdateProductDTO {
   deleteTags: string[];
   addCategoryIds: number[];
   deleteCategoryIds: number[];
+  sellPrice: number;
+  costPrice: number;
+  comparePrice: number;
 }
 
 export class UpdateVariantDTO {
@@ -201,4 +210,3 @@ export class UpdateVariantDTO {
   skuCode: string | undefined;
   unit: string | undefined;
 }
-
