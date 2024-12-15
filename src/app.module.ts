@@ -13,6 +13,8 @@ import { DiscountModule } from './modules/discount/discount.module';
 import { MailModule } from './modules/mail/mail.module';
 import { CartModule } from './modules/cart/cart.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { OrderModule } from './modules/order/order.module';
+import { ReportModule } from './modules/report/report.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     DiscountModule,
     MailModule,
     CartModule,
+    OrderModule,
+    ReportModule,
   ],
   controllers: [],
   providers: [],

@@ -1,18 +1,20 @@
 import { DateFilterOptionValue } from '../types';
 
+
 export const isStringDate = (string: string) => {
   const date = new Date(string);
   return !isNaN(date.getTime());
 };
 
 export const getToday = () => {
-  return new Date();
+  return new Date(new Date().setHours(0, 0, 0, 0));
 };
 
 export const getPreviousDay = (numberOfDay: number) => {
-  const today = new Date();
+  const today = new Date(new Date().setHours(0, 0, 0, 0));
   const startDate = new Date();
   startDate.setDate(today.getDate() - numberOfDay);
+  startDate.setHours(0, 0, 0, 0);
   return startDate;
 };
 
@@ -20,8 +22,10 @@ export const getLastWeekStartEnd = () => {
   const today = new Date();
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay() - 7 + 1);
+  startOfWeek.setHours(0, 0, 0, 0);
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(0, 0, 0, 0);
   return {
     start: startOfWeek,
     end: endOfWeek,
@@ -32,8 +36,10 @@ export const getThisWeekStartEnd = () => {
   const today = new Date();
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+  startOfWeek.setHours(0, 0, 0, 0);
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(0, 0, 0, 0);
   return {
     start: startOfWeek,
     end: endOfWeek,
@@ -42,6 +48,7 @@ export const getThisWeekStartEnd = () => {
 
 export const getLastMonthStartEnd = () => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const firstDayOfCurrentMonth = new Date(
     today.getFullYear(),

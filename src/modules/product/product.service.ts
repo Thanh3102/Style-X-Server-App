@@ -898,6 +898,8 @@ export class ProductService {
   }
 
   async updateCategory(dto: UpdateCategoryDTO, req, res: Response) {
+    console.log(dto);
+
     try {
       const isTitleExist = await this.prisma.category.findFirst({
         where: {
@@ -905,8 +907,11 @@ export class ProductService {
           id: {
             not: parseInt(dto.id),
           },
+          collectionId: parseInt(dto.collectionId),
         },
       });
+
+      console.log('ísTitle', isTitleExist);
 
       if (isTitleExist)
         return res.status(400).json({ message: 'Tiêu đề đã tồn tại' });
@@ -917,8 +922,11 @@ export class ProductService {
           id: {
             not: parseInt(dto.id),
           },
+          collectionId: parseInt(dto.collectionId),
         },
       });
+
+      console.log('isSlug', isSlugExist);
 
       if (isSlugExist)
         return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
@@ -1721,5 +1729,4 @@ export class ProductService {
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
   }
-
 }

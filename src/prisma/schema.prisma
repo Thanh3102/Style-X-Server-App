@@ -14,15 +14,15 @@ model Employee {
   username          String    @unique
   password          String
   name              String
-  email             String
-  phoneNumber       String    @map("phone_number")
+  email             String    @unique
+  phoneNumber       String    @unique @map("phone_number")
   gender            Boolean
   dateOfBirth       DateTime  @map("date_of_birth") @db.Date
-  nationality       String
   isEmployed        Boolean   @default(true) @map("is_employed")
   void              Boolean   @default(false)
   lastLoginAt       DateTime? @map("last_login_at")
   createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
   createdEmployeeId Int?      @map("created_employee_id")
 
   creator                 Employee?          @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
@@ -39,6 +39,7 @@ model Employee {
   createdReceiveInventory ReceiveInventory[] @relation("ReceiveInventory_CreateUser")
   receiveChangeHistories  ReceiveHistory[]   @relation("ReceiveHistory_ChangeUser")
   createdDiscount         Discount[]         @relation("DiscountCreatedUser")
+  changedOrderHistory     OrderHistory[]     @relation("OrderHistoryChangeUser")
 
   @@map("employees")
 }
@@ -103,6 +104,7 @@ model Product {
   discountProducts  DiscountProduct[]   @relation("DiscountProduct_Product")
   cartItems         CartItem[]          @relation("CartItem_Product")
   guestCartItems    GuestCartItem[]     @relation("GuestCartItem_Product")
+  orderItems        OrderItem[]         @relation("OrderItem_Product")
 
   @@map("products")
 }
@@ -155,6 +157,7 @@ model ProductVariants {
   discountVariants DiscountVariant[] @relation("DiscountVariant_ProductVariant")
   cartItems        CartItem[]        @relation("CartItem_Variant")
   guestCartItems   GuestCartItem[]   @relation("GuestCartItem_Variant")
+  orderItems       OrderItem[]       @relation("OrderItem_Variant")
 
   // @@unique([title, ])
   @@map("product_variants")
@@ -198,6 +201,8 @@ model Inventory {
   histories      InventoryHistory[] @relation("InventoryHistory_Inventory")
   warehouse      Warehouse          @relation("InventoryWarehouse", references: [id], fields: [warehouse_id])
   productVariant ProductVariants    @relation("InventoryProductVariant", references: [id], fields: [variant_id])
+
+  @@unique([variant_id, warehouse_id])
 }
 
 model InventoryHistory {
@@ -214,7 +219,7 @@ model InventoryHistory {
   transactionAction           String   @map("transaction_action")
   reason                      String?
   changeOn                    DateTime @default(now()) @map("change_on")
-  changeUserId                Int      @map("change_user_id")
+  changeUserId                Int?     @map("change_user_id")
   inventoryId                 Int      @map("inventory_id")
   receiveInventoryId          Int?     @map("receive_inventory_id")
 
@@ -228,7 +233,7 @@ model InventoryHistory {
 model Supplier {
   id               Int      @id @default(autoincrement())
   code             String   @unique
-  name             String
+  name             String   @unique
   phoneNumber      String?  @map("phone_number")
   email            String?
   taxCode          String?  @map("tax_code")
@@ -302,7 +307,7 @@ model Warehouse {
   code          String   @unique
   phoneNumber   String?  @map("phone_number")
   email         String?
-  country       String?
+  // country       String?
   province      String?
   district      String?
   ward          String?
@@ -316,13 +321,14 @@ model Warehouse {
   updatedUser        Employee?          @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
   inventories        Inventory[]        @relation("InventoryWarehouse")
   receiveInventories ReceiveInventory[] @relation("ReceiveInventory_Warehouse")
+  orderItemSource    OrderItemSource[]  @relation("OrderWarehouseSource")
 
   @@map("warehouses")
 }
 
 model ReceiveInventory {
   id                            Int       @id @default(autoincrement())
-  code                          String
+  code                          String    @unique
   importAfterCreate             Boolean   @map("import_after_create")
   totalReceipt                  Int       @map("total_receipt")
   totalLandedCost               Int       @map("total_landed_cost")
@@ -350,6 +356,7 @@ model ReceiveInventory {
   inventoryHistories  InventoryHistory[]    @relation("InventoryHistory_Receive")
   tags                ReceiveInventoryTag[] @relation("receiveTags")
   items               ReceiveItem[]         @relation("ReceiveItem_ReceiveInventory")
+  orderItemSource     OrderItemSource[]     @relation("OrderReceiveSource")
 
   @@map("receive_inventory")
 }
@@ -410,7 +417,6 @@ model ReceiveHistory {
   transactionId Int?     @unique @map("transaction_id")
   changedUserId Int      @map("changed_user_id")
   receiveId     Int      @map("receive_id")
-  // batchId       Int?
   createdAt     DateTime @default(now()) @map("created_at")
 
   changedUser        Employee            @relation("ReceiveHistory_ChangeUser", references: [id], fields: [changedUserId])
@@ -466,6 +472,9 @@ model Discount {
   entitleCategories DiscountCategory[] @relation("DiscountCategory")
 
   // prerequisiteCustomerGroupIds Int[]
+  appliedOrders        OrderApplyDiscount[]     @relation("OrderApply_Discount")
+  appliedOrderItems    OrderItemApplyDiscount[] @relation("OrderItemApplyDiscount")
+  appliedOrderVouchers OrderApplyVoucher[]      @relation("OrderApplyVoucher_Discount")
 }
 
 model DiscountProduct {
@@ -514,7 +523,9 @@ model Customer {
   lastModifyAt DateTime  @default(now()) @map("last_modify_at")
   lastLoginAt  DateTime? @map("last_login_at")
 
-  cart Cart? @relation("Customer_Cart")
+  cart                  Cart?          @relation("Customer_Cart")
+  orders                Order[]        @relation("Customer_Order")
+  changedOrderHistories OrderHistory[] @relation("OrderHistoryChangeCustomer")
 }
 
 model CustomerVerify {
@@ -524,7 +535,7 @@ model CustomerVerify {
   password  String
   gender    String
   dob       DateTime @db.Date
-  otp       String
+  otp       String   @unique
   otpExpiry DateTime
   isVerify  Boolean  @default(false)
   attemps   Int      @default(0)
@@ -590,4 +601,155 @@ model GuestCartItem {
 
   @@unique([cartId, productId, variantId])
   @@map("guest_cart_item")
+}
+
+model Order {
+  id                       String   @id @default(uuid())
+  code                     String?  @unique
+  totalItemBeforeDiscount  Int      @map("total_item_before_discount") @db.UnsignedInt
+  totalItemAfterDiscount   Int      @map("total_item_after_discount") @db.UnsignedInt
+  totalItemDiscountAmount  Int      @map("total_item_discount_amount") @db.UnsignedInt
+  totalOrderDiscountAmount Int      @map("total_order_discount_amount") @db.UnsignedInt
+  totalOrderBeforeDiscount Int      @map("total_order_before_discount") @db.UnsignedInt
+  totalOrderAfterDiscount  Int      @map("total_order_after_discount") @db.UnsignedInt
+  userType                 String   @map("user_type")
+  status                   String
+  transactionStatus        String   @map("transaction_status")
+  // deliveryStatus           String   @map("delivery_status")
+  paymentMethod            String?  @map("payment_method")
+  email                    String?
+  name                     String?
+  phoneNumber              String?
+  province                 String?
+  district                 String?
+  ward                     String?
+  address                  String?
+  note                     String?
+  receiverName             String?  @map("receiver_name")
+  receiverPhoneNumber      String?  @map("receiver_phonenumber")
+  createdAt                DateTime @default(now())
+  expire                   BigInt   @db.UnsignedBigInt
+  customerId               String?
+  void                     Boolean  @default(false)
+
+  items          OrderItem[]          @relation("Order_OrderItem")
+  customer       Customer?            @relation("Customer_Order", references: [id], fields: [customerId])
+  applyDiscounts OrderApplyDiscount[] @relation("OrderApplyDiscount")
+  history        OrderHistory[]       @relation("OrderHistory")
+  applyVouchers  OrderApplyVoucher[]  @relation("OrderVoucher")
+  // transactions   OrderTransaction[]   @relation("OrderTransaction")
+}
+
+model OrderApplyDiscount {
+  id                         Int     @id @default(autoincrement())
+  value                      Int
+  valueType                  String  @map("value_type")
+  valueLimitAmount           Int?    @map("value_limit_amount")
+  discountAmount             Int     @map("discount_amount") @db.UnsignedInt
+  combineWithProductDiscount Boolean @map("combine_with_product_discount")
+  combineWithOrderDiscount   Boolean @map("combine_with_order_discount")
+  discountId                 Int     @map("discount_id")
+  orderId                    String
+
+  discount Discount @relation("OrderApply_Discount", references: [id], fields: [discountId])
+  order    Order    @relation("OrderApplyDiscount", references: [id], fields: [orderId], onDelete: Cascade)
+
+  @@map("order_apply_discount")
+}
+
+model OrderItem {
+  id                       Int    @id @default(autoincrement())
+  orderId                  String
+  productId                Int
+  variantId                Int
+  quantity                 Int
+  priceBeforeDiscount      Int    @map("price_before_discount") @db.UnsignedInt
+  totalPriceBeforeDiscount Int    @map("total_price_before_discount") @db.UnsignedInt
+  priceAfterDiscount       Int    @map("price_after_discount") @db.UnsignedInt
+  totalPriceAfterDiscount  Int    @map("total_price_after_discount") @db.UnsignedInt
+  discountAmount           Int    @map("discount_amount") @db.UnsignedInt
+  totalDiscountAmount      Int    @map("total_discount_amount") @db.UnsignedInt
+
+  order          Order                    @relation("Order_OrderItem", references: [id], fields: [orderId], onDelete: Cascade)
+  product        Product                  @relation("OrderItem_Product", references: [id], fields: [productId])
+  variant        ProductVariants          @relation("OrderItem_Variant", references: [id], fields: [variantId], onDelete: Cascade)
+  applyDiscounts OrderItemApplyDiscount[] @relation("OrderItem_ApplyDiscount")
+  sources        OrderItemSource[]        @relation("OrderItemSource")
+
+  @@map("order_item")
+}
+
+model OrderItemApplyDiscount {
+  id                         Int     @id @default(autoincrement())
+  value                      Int
+  valueType                  String  @map("value_type")
+  valueLimitAmount           Int?    @map("value_limit_amount")
+  discountAmount             Int     @map("discount_amount") @db.UnsignedInt
+  combineWithProductDiscount Boolean @map("combine_with_product_discount")
+  combineWithOrderDiscount   Boolean @map("combine_with_order_discount")
+  discountId                 Int     @map("discount_id")
+  orderItemId                Int     @map("order_item_id")
+
+  discount  Discount  @relation("OrderItemApplyDiscount", fields: [discountId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation("OrderItem_ApplyDiscount", fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@map("order_item_apply_discount")
+}
+
+model OrderItemSource {
+  id          Int               @id @default(autoincrement())
+  quantity    Int
+  costPrice   Int               @map("cost_price")
+  orderItemId Int               @map("order_item_id")
+  receiveId   Int?              @map("receive_id")
+  warehouseId Int               @map("warehouse_id")
+  
+  orderItem   OrderItem         @relation("OrderItemSource", references: [id], fields: [orderItemId], onDelete: Cascade)
+  receive     ReceiveInventory? @relation("OrderReceiveSource", references: [id], fields: [receiveId])
+  warehouse   Warehouse         @relation("OrderWarehouseSource", references: [id], fields: [warehouseId])
+
+  @@map("order_item_source")
+}
+
+// model OrderTransaction {
+//   id            Int      @id @default(autoincrement())
+//   amount        Int      @db.UnsignedInt
+//   paymentMethod String   @map("payment_method")
+//   processedAt   DateTime @map("processed_At")
+//   createdAt     DateTime @default(now()) @map("created_at")
+//   orderId       String   @map("order_id")
+
+//   order Order @relation("OrderTransaction", references: [id], fields: [orderId], onDelete: Cascade)
+
+//   @@map("order_transaction")
+// }
+
+model OrderHistory {
+  id                Int      @id @default(autoincrement())
+  action            String
+  type              String
+  reason            String?
+  // transactionId     Int?     @unique @map("transaction_id")
+  changedUserId     Int?     @map("changed_user_id")
+  changedCustomerId String?  @map("changed_customer_id")
+  orderId           String   @map("order_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  changedCustomer Customer? @relation("OrderHistoryChangeCustomer", references: [id], fields: [changedCustomerId])
+  changedEmployee Employee? @relation("OrderHistoryChangeUser", references: [id], fields: [changedUserId])
+  order           Order     @relation("OrderHistory", references: [id], fields: [orderId], onDelete: Cascade)
+  // transaction OrderTransaction?
+
+  @@map("Order_history")
+}
+
+model OrderApplyVoucher {
+  id         Int    @id @default(autoincrement())
+  discountId Int    @map("discount_id")
+  orderId    String @map("order_item_id")
+
+  discount Discount @relation("OrderApplyVoucher_Discount", fields: [discountId], references: [id], onDelete: Cascade)
+  order    Order    @relation("OrderVoucher", fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_apply_voucher")
 }

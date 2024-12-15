@@ -15,6 +15,12 @@ export class UpdateItemVariantDto {
   newVariantId: number;
 }
 
+export class UpdateGuestItemVariantDto {
+  itemId: number;
+  cartId: string | null;
+  newVariantId: number;
+}
+
 export class AddGuestItemDto {
   productId: number;
   variantId: number;

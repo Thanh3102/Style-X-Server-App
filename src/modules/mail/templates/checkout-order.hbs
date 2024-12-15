@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh Sách Sản Phẩm</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+
+        table th,
+        table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #f4f4f4;
+        }
+
+        .product-name {
+            font-weight: bold;
+        }
+
+        .total {
+            font-size: 16px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Danh Sách Sản Phẩm</h2>
+    <p>Chào {{customerName}},</p>
+    <p>Cảm ơn bạn đã đặt hàng tại cửa hàng của chúng tôi. Đây là đơn hàng của bạn</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Sản phẩm</th>
+                <th>Giá</th>
+                <th>Số lượng</th>
+                <th>Tổng giá trị</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each order.items}}
+            <tr>
+                <td class="product-name">{{this.product.name}}</td>
+                <td>{{this.priceAfterDiscount}} VND</td>
+                <td>{{this.quantity}}</td>
+                <td>{{this.totalPriceAfterDiscount}} VND</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+
+    {{!-- <p class="total">Tổng số sản phẩm: {{totalQuantity}}</p> --}}
+    <p class="total">Tổng giá trị đơn hàng: {{order.totalOrderAfterDiscount}} VND</p>
+
+    <p>Chúc bạn mua sắm vui vẻ!</p>
+    <p>Trân trọng,</p>
+    <p>Đội ngũ hỗ trợ khách hàng</p>
+</body>
+
+</html>

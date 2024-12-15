@@ -19,6 +19,7 @@ export async function generateCustomID(
       createdAt: 'desc',
     },
   });
+
   if (lastCustomIdRecord) {
     const countString = lastCustomIdRecord[codeColumn].slice(prefix.length);
     const newCount = Number(countString) + 1;

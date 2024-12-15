@@ -659,19 +659,19 @@ export class DiscountService {
           type: {
             in: type,
           },
-          // startOn: {
-          //   lte: new Date(),
-          // },
-          // OR: [
-          //   {
-          //     endOn: null,
-          //   },
-          //   {
-          //     endOn: {
-          //       gte: new Date(),
-          //     },
-          //   },
-          // ],
+          startOn: {
+            lte: new Date(),
+          },
+          OR: [
+            {
+              endOn: null,
+            },
+            {
+              endOn: {
+                gte: new Date(),
+              },
+            },
+          ],
         },
         include: {
           entitleCategories: {

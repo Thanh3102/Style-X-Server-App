@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thông Báo Đơn Hàng Đang Giao</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #4CAF50;
+      font-size: 24px;
+      text-align: center;
+    }
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: #fff;
+      text-decoration: none;
+      font-weight: bold;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .footer {
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Đơn Hàng Đang Được Giao!</h1>
+
+    <p>Chào {{order.name}},</p>
+
+    <p>Chúng tôi muốn thông báo với bạn rằng đơn hàng <strong>#{{order.code}}</strong> của bạn hiện đang được giao và sẽ đến tay bạn trong thời gian sớm nhất.</p>
+
+    <p>Thông tin đơn hàng:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Sản phẩm</th>
+                    <th>Giá</th>
+                    <th>Số lượng</th>
+                    <th>Tổng giá trị</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each order.items}}
+                <tr>
+                    <td class="product-name">{{this.product.name}}</td>
+                    <td>{{this.priceAfterDiscount}} VND</td>
+                    <td>{{this.quantity}}</td>
+                    <td>{{this.totalPriceAfterDiscount}} VND</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+    <ul>
+      <li><strong>Trạng thái:</strong> Đang giao</li>
+      <li><strong>Địa chỉ giao hàng:</strong> {{order.address}}, {{order.ward}}, {{order.district}}, ${{order.province}}</li>
+    </ul>
+
+    <p>Cảm ơn bạn đã lựa chọn chúng tôi. Chúng tôi rất vui khi được phục vụ bạn và sẽ tiếp tục theo dõi quá trình giao hàng để đảm bảo bạn nhận được hàng hóa đúng hẹn.</p>
+
+    <p>Trong trường hợp bạn có bất kỳ câu hỏi nào, xin vui lòng liên hệ với chúng tôi qua email hoặc điện thoại.</p>
+
+
+    <div class="footer">
+      <p>Đội ngũ hỗ trợ khách hàng luôn sẵn sàng giúp đỡ bạn!</p>
+    </div>
+  </div>
+
+</body>
+</html>

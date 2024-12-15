@@ -59,6 +59,7 @@ export type UpdateCategoryDTO = {
   title: string;
   slug: string;
   image: Express.Multer.File | undefined | null;
+  collectionId: string;
 };
 
 export type CreateCollectionDTO = {

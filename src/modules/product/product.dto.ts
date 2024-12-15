@@ -103,7 +103,7 @@ export class UpdateCategoryDTO {
   title: string;
   slug: string;
   image: Express.Multer.File | undefined | null;
-  collectionId: number;
+  collectionId: string;
 }
 
 export class CreateProductDataDTO {
