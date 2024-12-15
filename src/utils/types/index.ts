@@ -10,11 +10,12 @@ export enum FilterParam {
   ACTIVE = 'active',
   RECEIVE_IDS = 'receiveIds',
   VARIANT_IDS = 'variantIds',
+  REPORT_DATE = 'reportDate',
+  REPORT_DATE_MIN = 'reportDateMin',
+  REPORT_DATE_MAX = 'reportDateMax',
 }
 
 export type QueryParams = Partial<Record<FilterParam, string>>;
-
-
 
 export enum DateFilterOptionValue {
   TODAY = 'today',
@@ -32,7 +33,7 @@ export enum DateFilterOptionValue {
 
 export enum InventoryTransactionType {
   PRODUCT = 'Sản phẩm',
-  SELL = 'Bán hàng',
+  ORDER = 'Đơn hàng',
   RECEIVE_INVENTORY = 'Nhập hàng',
   PURCHASE_ORDER = 'Đặt hàng nhập',
 }
@@ -43,4 +44,16 @@ export enum InventoryTransactionAction {
   RECEIVE_CANCEL = 'Hủy đơn nhập',
   ADJUST = 'Điều chỉnh số lượng',
   PURCHASE = 'Đặt hàng nhập',
+  CREATE_TEMP_ORDER = 'Tạo đơn hàng nháp',
+  DELETE_TEMP_ORDER = 'Hủy đơn hàng nháp',
+  CANCEL_ORDER = 'Hủy đơn hàng',
+  DELIVERY = 'Giao hàng',
+  DELIVERY_COMPLETE = 'Hoàn thành giao hàng',
 }
+
+export type PaginitionData = {
+  total: number;
+  count: number;
+  page: number;
+  limit: number;
+};

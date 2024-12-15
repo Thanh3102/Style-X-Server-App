@@ -18,6 +18,7 @@ import {
   AddGuestItemDto,
   AddItemDto,
   SyncCartDto,
+  UpdateGuestItemVariantDto,
   UpdateGuestSelectedItemsDto,
   UpdateItemQuantityDto,
   UpdateItemVariantDto,
@@ -61,6 +62,19 @@ export class CartController {
     return this.cartService.updateGuestSelectedItems(
       dto.cartId,
       dto.itemIds,
+      res,
+    );
+  }
+
+  @Public()
+  @Put('/guest/variant')
+  updateGuestItemVariant(@Body() dto: UpdateGuestItemVariantDto, @Res() res) {
+    return this.cartService.updateGuestItemVariant(
+      {
+        cartId: dto.cartId,
+        itemId: dto.itemId,
+        newVariantId: dto.newVariantId,
+      },
       res,
     );
   }

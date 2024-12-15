@@ -17,4 +17,34 @@ export class MailService {
       },
     });
   }
+
+  async sendUserCheckoutComplete(
+    order: any,
+    email: string,
+    customerName: string,
+  ) {
+    await this.mailerService.sendMail({
+      to: email,
+      from: 'noreply <support@stylex.com>',
+      subject: 'Tạo đơn hàng thành công',
+      template: './checkout-order',
+      context: {
+        customerName: customerName,
+        order: order,
+      },
+    });
+  }
+
+  async sendUserDeliveryConfirmNotification(order: any) {
+    await this.mailerService.sendMail({
+      to: order.email,
+      from: 'noreply <support@stylex.com>',
+      subject: 'Thông báo cập nhật trạng thái đơn hàng',
+      template: './delivery-notification',
+      context: {
+        customerName: order.name,
+        order: order,
+      },
+    });
+  }
 }

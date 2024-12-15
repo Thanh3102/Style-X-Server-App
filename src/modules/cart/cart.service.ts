@@ -368,7 +368,7 @@ export class CartService {
         type: ['product'],
       });
 
-      const totalOrderBeforeDiscount = selectedItems.reduce(
+      const totalItemBeforeDiscount = selectedItems.reduce(
         (total, item) => total + item.quantity * item.variant.sellPrice,
         0,
       );
@@ -382,22 +382,22 @@ export class CartService {
           discountPrice,
         } = await this.calcItemDiscount(
           item,
-          totalOrderBeforeDiscount,
+          totalItemBeforeDiscount,
           activePromotions,
         );
         return {
           ...item,
+          applyPromotions,
           discountPrice,
           discountPercent,
-          discountAmount,
-          applyPromotions,
+          discountAmount: discountAmount * item.quantity,
           totalDiscount: discountPrice * item.quantity,
           totalPrice: item.variant.sellPrice * item.quantity,
         };
       });
 
       const finalItems = await Promise.all(calcItemsDiscountPromise);
-      const totalOrderAfterDiscount = finalItems
+      const totalItemAfterDiscount = finalItems
         .filter((item) => selectedItems.find((i) => i.id === item.id))
         .reduce((total, item) => {
           if (item.totalDiscount) {
@@ -405,14 +405,152 @@ export class CartService {
           }
           return total + item.totalPrice;
         }, 0);
-      const totalDiscountAmount = finalItems
+      const totalItemDiscountAmount = finalItems
         .filter((item) => selectedItems.find((i) => i.id === item.id))
         .reduce((total, item) => total + item.discountAmount, 0);
+
+      // Tính các khuyến mại đơn hàng
+      // Tính toán giảm giá đơn hàng
+      // Lưu lại số tiền sau mỗi giảm giá áp dụng
+      const totalOrderBeforeDiscount = totalItemAfterDiscount;
+      let totalOrderRemain = totalItemAfterDiscount;
+
+      // Các khuyến mại đơn hàng hiện tại
+      const activeOrderPromotions =
+        await this.discountService.getActiveDiscounts({
+          mode: ['promotion'],
+          type: ['order'],
+        });
+
+      // Lọc ra các khuyến mại đơn hàng có thể áp dụng
+      const affectedOrderPromotions = activeOrderPromotions.filter(
+        (promotion) => {
+          switch (promotion.prerequisite) {
+            case 'none':
+              return true;
+            case 'prerequisiteMinTotal':
+              if (promotion.combinesWithProductDiscount)
+                return totalItemAfterDiscount >= promotion.prerequisiteMinTotal;
+
+              if (!promotion.combinesWithProductDiscount)
+                return totalItemAfterDiscount >= promotion.prerequisiteMinTotal;
+              break;
+
+            case 'prerequisiteMinItem':
+              if (items.length >= promotion.prerequisiteMinItem) return true;
+              break;
+          }
+          return false;
+        },
+      );
+
+      //Lọc ra các giảm giá đơn hàng có thể kết hợp và không kết hợp
+      const canCombineOrderPromotion = affectedOrderPromotions.filter(
+        (promo) => promo.combinesWithOrderDiscount,
+      );
+
+      const canCombineValueDiscount = canCombineOrderPromotion.filter(
+        (promo) => promo.valueType === 'value',
+      );
+
+      const canCombinePercentDiscount = canCombineOrderPromotion.filter(
+        (promo) => promo.valueType === 'percent',
+      );
+
+      const cannotCombineOrderPromotion = affectedOrderPromotions.filter(
+        (promo) => !promo.combinesWithOrderDiscount,
+      );
+
+      let totalOrderDiscountAmount = 0;
+      const applyOrderPromotions = [];
+
+      // Tìm giảm giá đơn hàng không kết hợp lớn nhất
+      if (cannotCombineOrderPromotion.length > 0) {
+        let maxNonCombineDiscountAmount = -1;
+        let discountValue = 0;
+        let applyPromotion = null;
+        for (const promotion of cannotCombineOrderPromotion) {
+          switch (promotion.valueType) {
+            case 'percent':
+              let percentDiscountValue = Math.round(
+                totalItemAfterDiscount * promotion.value * 0.01,
+              );
+              if (promotion.valueLimitAmount) {
+                percentDiscountValue =
+                  percentDiscountValue <= promotion.valueLimitAmount
+                    ? percentDiscountValue
+                    : promotion.valueLimitAmount;
+              }
+              if (percentDiscountValue > maxNonCombineDiscountAmount) {
+                (maxNonCombineDiscountAmount = percentDiscountValue),
+                  (applyPromotion = promotion);
+                discountValue = percentDiscountValue;
+              }
+              break;
+            case 'value':
+              const valueDiscountValue =
+                totalItemAfterDiscount - promotion.value >= 0
+                  ? totalItemAfterDiscount - promotion.value
+                  : 0;
+              if (valueDiscountValue > maxNonCombineDiscountAmount) {
+                maxNonCombineDiscountAmount = valueDiscountValue;
+                applyPromotion = promotion;
+                discountValue = valueDiscountValue;
+              }
+              break;
+          }
+        }
+
+        // Tính lại giá trị còn lại để giảm giá
+        totalOrderRemain -= maxNonCombineDiscountAmount;
+        totalOrderDiscountAmount += maxNonCombineDiscountAmount;
+        // Lưu lại chương trình đã áp dụng (Nếu có)
+        if (applyPromotion)
+          applyOrderPromotions.push({
+            ...applyPromotion,
+            amount: discountValue,
+          });
+      }
+
+      if (canCombineOrderPromotion.length > 0) {
+        // Tính giá trị giảm %
+        for (const promotion of canCombinePercentDiscount) {
+          let amount = totalOrderRemain * promotion.value * 0.01;
+          if (promotion.valueLimitAmount && amount > promotion.valueLimitAmount)
+            amount = promotion.valueLimitAmount;
+          totalOrderRemain -= amount;
+          totalOrderDiscountAmount += amount;
+          applyOrderPromotions.push({ ...promotion, amount });
+        }
+
+        // Tính giá trị giảm cố định (dừng khi giảm tới âm)
+        for (const promotion of canCombineValueDiscount) {
+          if (totalOrderRemain > 0) {
+            const newPriceRemain = totalOrderRemain - promotion.value;
+            totalOrderRemain = newPriceRemain >= 0 ? newPriceRemain : 0;
+            if (newPriceRemain >= 0) {
+              totalOrderDiscountAmount += promotion.value;
+            }
+            applyOrderPromotions.push({
+              ...promotion,
+              amount: promotion.value,
+            });
+          }
+        }
+      }
+      // totalOrderRemain = Math.round(totalOrderRemain / 1000) * 1000;
+
+      const totalOrderAfterDiscount = totalOrderRemain;
+
       return res.status(200).json({
         data: finalItems,
+        applyOrderPromotions,
+        totalItemBeforeDiscount,
+        totalItemAfterDiscount,
+        totalItemDiscountAmount,
         totalOrderBeforeDiscount,
         totalOrderAfterDiscount,
-        totalDiscountAmount,
+        totalOrderDiscountAmount,
       });
     } catch (error) {
       console.log(error);
@@ -439,7 +577,7 @@ export class CartService {
               type: ['product'],
             });
 
-          const totalOrderBeforeDiscount = selectedItems.reduce(
+          const totalItemBeforeDiscount = selectedItems.reduce(
             (total, item) => total + item.quantity * item.variant.sellPrice,
             0,
           );
@@ -453,22 +591,22 @@ export class CartService {
               discountPrice,
             } = await this.calcItemDiscount(
               item,
-              totalOrderBeforeDiscount,
+              totalItemBeforeDiscount,
               activePromotions,
             );
             return {
               ...item,
               discountPrice,
               discountPercent,
-              discountAmount,
               applyPromotions,
+              discountAmount: discountAmount * item.quantity,
               totalDiscount: discountPrice * item.quantity,
               totalPrice: item.variant.sellPrice * item.quantity,
             };
           });
 
           const finalItems = await Promise.all(calcItemsDiscountPromise);
-          const totalOrderAfterDiscount = finalItems
+          const totalItemAfterDiscount = finalItems
             .filter((item) => selectedItems.find((i) => i.id === item.id))
             .reduce((total, item) => {
               if (item.totalDiscount) {
@@ -476,17 +614,161 @@ export class CartService {
               }
               return total + item.totalPrice;
             }, 0);
-          const totalDiscountAmount = finalItems
+          const totalItemDiscountAmount = finalItems
             .filter((item) => selectedItems.find((i) => i.id === item.id))
             .reduce((total, item) => total + item.discountAmount, 0);
 
-          // Tính toán đơn hàng (Từ các item đã chọn)
+          // Tính các khuyến mại đơn hàng
+          // Tính toán giảm giá đơn hàng
+          // Lưu lại số tiền sau mỗi giảm giá áp dụng
+          const totalOrderBeforeDiscount = totalItemAfterDiscount;
+          let totalOrderRemain = totalItemAfterDiscount;
+
+          // Các khuyến mại đơn hàng hiện tại
+          const activeOrderPromotions =
+            await this.discountService.getActiveDiscounts({
+              mode: ['promotion'],
+              type: ['order'],
+            });
+
+          // Lọc ra các khuyến mại đơn hàng có thể áp dụng
+
+          const affectedOrderPromotions = activeOrderPromotions.filter(
+            (promotion) => {
+              switch (promotion.prerequisite) {
+                case 'none':
+                  return true;
+                case 'prerequisiteMinTotal':
+                  if (promotion.combinesWithProductDiscount)
+                    return (
+                      totalItemAfterDiscount >= promotion.prerequisiteMinTotal
+                    );
+
+                  if (!promotion.combinesWithProductDiscount)
+                    return (
+                      totalItemAfterDiscount >= promotion.prerequisiteMinTotal
+                    );
+                  break;
+
+                case 'prerequisiteMinItem':
+                  if (items.length >= promotion.prerequisiteMinItem)
+                    return true;
+                  break;
+              }
+              return false;
+            },
+          );
+
+          //Lọc ra các giảm giá đơn hàng có thể kết hợp và không kết hợp
+          const canCombineOrderPromotion = affectedOrderPromotions.filter(
+            (promo) => promo.combinesWithOrderDiscount,
+          );
+
+          const canCombineValueDiscount = canCombineOrderPromotion.filter(
+            (promo) => promo.valueType === 'value',
+          );
+
+          const canCombinePercentDiscount = canCombineOrderPromotion.filter(
+            (promo) => promo.valueType === 'percent',
+          );
+
+          const cannotCombineOrderPromotion = affectedOrderPromotions.filter(
+            (promo) => !promo.combinesWithOrderDiscount,
+          );
+
+          let totalOrderDiscountAmount = 0;
+          const applyOrderPromotions = [];
+
+          // Tìm giảm giá đơn hàng không kết hợp lớn nhất
+          if (cannotCombineOrderPromotion.length > 0) {
+            let maxNonCombineDiscountAmount = -1;
+            let discountValue = 0;
+            let applyPromotion = null;
+            for (const promotion of cannotCombineOrderPromotion) {
+              switch (promotion.valueType) {
+                case 'percent':
+                  let percentDiscountValue = Math.round(
+                    totalItemAfterDiscount * promotion.value * 0.01,
+                  );
+                  if (promotion.valueLimitAmount) {
+                    percentDiscountValue =
+                      percentDiscountValue <= promotion.valueLimitAmount
+                        ? percentDiscountValue
+                        : promotion.valueLimitAmount;
+                  }
+                  if (percentDiscountValue > maxNonCombineDiscountAmount) {
+                    (maxNonCombineDiscountAmount = percentDiscountValue),
+                      (applyPromotion = promotion);
+                    discountValue = percentDiscountValue;
+                  }
+                  break;
+                case 'value':
+                  const valueDiscountValue =
+                    totalItemAfterDiscount - promotion.value >= 0
+                      ? totalItemAfterDiscount - promotion.value
+                      : 0;
+                  if (valueDiscountValue > maxNonCombineDiscountAmount) {
+                    maxNonCombineDiscountAmount = valueDiscountValue;
+                    applyPromotion = promotion;
+                    discountValue = valueDiscountValue;
+                  }
+                  break;
+              }
+            }
+
+            // Tính lại giá trị còn lại để giảm giá
+            totalOrderRemain -= maxNonCombineDiscountAmount;
+            totalOrderDiscountAmount += maxNonCombineDiscountAmount;
+            // Lưu lại chương trình đã áp dụng (Nếu có)
+            if (applyPromotion)
+              applyOrderPromotions.push({
+                ...applyPromotion,
+                amount: discountValue,
+              });
+          }
+
+          if (canCombineOrderPromotion.length > 0) {
+            // Tính giá trị giảm %
+            for (const promotion of canCombinePercentDiscount) {
+              let amount = totalOrderRemain * promotion.value * 0.01;
+              if (
+                promotion.valueLimitAmount &&
+                amount > promotion.valueLimitAmount
+              )
+                amount = promotion.valueLimitAmount;
+              totalOrderRemain -= amount;
+              totalOrderDiscountAmount += amount;
+              applyOrderPromotions.push({ ...promotion, amount });
+            }
+
+            // Tính giá trị giảm cố định (dừng khi giảm tới âm)
+            for (const promotion of canCombineValueDiscount) {
+              if (totalOrderRemain > 0) {
+                const newPriceRemain = totalOrderRemain - promotion.value;
+                totalOrderRemain = newPriceRemain >= 0 ? newPriceRemain : 0;
+                if (newPriceRemain >= 0) {
+                  totalOrderDiscountAmount += promotion.value;
+                }
+                applyOrderPromotions.push({
+                  ...promotion,
+                  amount: promotion.value,
+                });
+              }
+            }
+          }
+          // totalOrderRemain = Math.round(totalOrderRemain / 1000) * 1000;
+
+          const totalOrderAfterDiscount = totalOrderRemain;
 
           return res.status(200).json({
             data: finalItems,
+            applyOrderPromotions,
+            totalItemBeforeDiscount,
+            totalItemAfterDiscount,
+            totalItemDiscountAmount,
             totalOrderBeforeDiscount,
             totalOrderAfterDiscount,
-            totalDiscountAmount,
+            totalOrderDiscountAmount,
           });
         }
 
@@ -510,6 +792,8 @@ export class CartService {
         return res.status(200).json({ id: createdCart.id, data: [] });
       }
     } catch (error) {
+      console.log(error);
+
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
   }
@@ -582,6 +866,14 @@ export class CartService {
             sellPrice: true,
             unit: true,
             type: true,
+            variants: {
+              select: {
+                id: true,
+                option1: true,
+                option2: true,
+                option3: true,
+              },
+            },
           },
         },
         variant: {
@@ -606,9 +898,13 @@ export class CartService {
       const options = await this.productService.getProductOptions(
         item.product.id,
       );
+      const { avaiable } = await this.productService.getVariantInventoryStock(
+        item.variant.id,
+      );
       return {
         ...item,
         options,
+        avaiable,
       };
     });
 
@@ -984,8 +1280,6 @@ export class CartService {
     req,
     res: Response,
   ) {
-    console.log('New variant id', newVariantId);
-
     try {
       await this.prisma.$transaction(
         async (p) => {
@@ -1051,6 +1345,98 @@ export class CartService {
           }
 
           await p.cartItem.update({
+            where: {
+              id: itemId,
+            },
+            data: {
+              variantId: newVariantId,
+            },
+          });
+        },
+        { maxWait: 15000, timeout: 15000 },
+      );
+      return res.status(200).json({ message: 'Đã cập nhật giỏ hàng' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({});
+    }
+  }
+
+  async updateGuestItemVariant(
+    data: {
+      itemId: number;
+      newVariantId: number;
+      cartId: string;
+    },
+    res: Response,
+  ) {
+    try {
+      await this.prisma.$transaction(
+        async (p) => {
+          const { cartId, itemId, newVariantId } = data;
+          const cart = await p.guestCart.findFirst({
+            where: {
+              id: cartId,
+            },
+            include: {
+              items: true,
+            },
+          });
+
+          if (!cart) return res.status(200).json({});
+
+          const changeItem = await p.guestCartItem.findUnique({
+            where: {
+              id: itemId,
+            },
+          });
+
+          const { avaiable: newVariantAvaiable } =
+            await this.productService.getVariantInventoryStock(newVariantId);
+
+          // Kiểm tra phiên bản mới chọn đã có trong giỏ chưa
+          const findItem = cart.items.find(
+            (item) => item.variantId === newVariantId && item.id !== itemId,
+          );
+
+          // Nếu đã có một item khác là sản phẩm này thì cộng dồn (Kiểm tra tồn kho trước khi thay đổi)
+          if (findItem) {
+            const newQuantity = findItem.quantity + changeItem.quantity;
+            if (newQuantity > newVariantAvaiable) {
+              return res.status(400).json({
+                message:
+                  'Số lượng sản phẩm không đủ. Vui lòng giảm số lượng sản phẩm',
+              });
+            }
+
+            await p.guestCartItem.delete({
+              where: {
+                id: itemId,
+              },
+            });
+
+            await p.guestCartItem.update({
+              where: {
+                id: findItem.id,
+              },
+              data: {
+                quantity: newQuantity,
+              },
+            });
+
+            return;
+          }
+
+          // Nếu không có sản phẩm khác trùng tùy chọn
+          // Kiểm tra phiên bản mới còn đủ số lượng không
+          // Thay đổi variantId item sang variant mới
+          if (changeItem.quantity > newVariantAvaiable) {
+            return res.status(400).json({
+              message: 'Số lượng sản phẩm không đủ. Vui lòng thay đổi số lượng',
+            });
+          }
+
+          await p.guestCartItem.update({
             where: {
               id: itemId,
             },
