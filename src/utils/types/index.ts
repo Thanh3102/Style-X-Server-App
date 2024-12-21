@@ -8,11 +8,17 @@ export enum FilterParam {
   TAG_TYPE = 'tagType',
   ASSIGN_IDS = 'assignIds',
   ACTIVE = 'active',
+  MODE = 'mode',
+  TYPE = 'type',
   RECEIVE_IDS = 'receiveIds',
   VARIANT_IDS = 'variantIds',
   REPORT_DATE = 'reportDate',
   REPORT_DATE_MIN = 'reportDateMin',
   REPORT_DATE_MAX = 'reportDateMax',
+  SORTBY = 'sortBy',
+  ORDER_STATUS = 'orderStatus',
+  RECEIVE_STATUS = 'receiveStatus',
+  RECEIVE_TRANSACTION_STATUS = 'receiveTransactionStatus',
 }
 
 export type QueryParams = Partial<Record<FilterParam, string>>;

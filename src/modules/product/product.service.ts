@@ -27,6 +27,7 @@ import { InventoriesService } from '../inventories/inventories.service';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { DiscountService } from '../discount/discount.service';
 import { Prisma } from '@prisma/client';
+import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
 
 @Injectable()
 export class ProductService {
@@ -43,7 +44,7 @@ export class ProductService {
     if (
       await this.prisma.product.findFirst({
         select: { id: true },
-        where: { name: dto.name },
+        where: { name: dto.name, void: false },
       })
     )
       throw new BadRequestException('Tên sản phẩm đã được sử dụng');
@@ -60,7 +61,7 @@ export class ProductService {
     });
 
     if (!product) throw new Error('Sản phẩm không tồn tại');
-    if (product.void) throw new Error('Sản phẩm đã bị xóa');
+    // if (product.void) throw new Error('Sản phẩm đã bị xóa');
   };
 
   public getInventoryStock = async (productId: number) => {
@@ -120,6 +121,7 @@ export class ProductService {
     if (short) {
       const options = productProperties.map((pp) => {
         return {
+          id: pp.id,
           name: pp.name,
           values: pp.values.map((v) => v.value),
         };
@@ -296,50 +298,62 @@ export class ProductService {
       createdOn,
       createdOnMax,
       createdOnMin,
-      assignIds,
     } = queryParams;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
-    const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
+    const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let condition = {
-      query: {},
-      created: {},
-      assignedIds: {},
-      default: {
-        void: false,
-      },
+    let whereCondition: Prisma.ProductWhereInput = {
+      void: false,
     };
 
     if (query) {
-      condition.query = {
-        OR: [
-          {
-            name: {
-              contains: query,
+      whereCondition.OR = [
+        {
+          name: {
+            contains: query,
+          },
+        },
+        {
+          skuCode: {
+            contains: query,
+          },
+        },
+        {
+          barCode: {
+            contains: query,
+          },
+        },
+        {
+          variants: {
+            some: {
+              OR: [
+                {
+                  skuCode: query,
+                },
+                {
+                  barCode: query,
+                },
+              ],
             },
           },
-          {
-            skuCode: {
-              contains: query,
-            },
-          },
-          {
-            barCode: {
-              contains: query,
-            },
-          },
-        ],
-      };
+        },
+      ];
     }
 
-    let whereCondition = {
-      ...condition.default,
-      ...condition.query,
-      ...condition.created,
-      ...condition.assignedIds,
-    };
+    if (createdOn || createdOnMin || createdOnMax) {
+      const { startDate, endDate } = tranformCreatedOnParams(
+        createdOn,
+        createdOnMin,
+        createdOnMax,
+      );
+      if (startDate || endDate) {
+        whereCondition.createdAt = {};
+        if (startDate) whereCondition.createdAt.gte = startDate;
+        if (endDate) whereCondition.createdAt.lte = endDate;
+      }
+    }
 
     const products = await this.prisma.product.findMany({
       select: {
@@ -542,6 +556,7 @@ export class ProductService {
           id: id,
         },
         select: {
+          void: true,
           id: true,
           name: true,
           barCode: true,
@@ -898,8 +913,6 @@ export class ProductService {
   }
 
   async updateCategory(dto: UpdateCategoryDTO, req, res: Response) {
-    console.log(dto);
-
     try {
       const isTitleExist = await this.prisma.category.findFirst({
         where: {
@@ -1289,11 +1302,13 @@ export class ProductService {
 
   async update(dto: UpdateProductDTO, req, res: Response) {
     const updateUserId = req.user.id;
+    console.log('DTO', dto);
+
     try {
       await this.prisma.$transaction(
         async (p) => {
           // Update product
-          await p.product.update({
+          const updateProduct = await p.product.update({
             where: {
               id: dto.id,
             },
@@ -1308,6 +1323,17 @@ export class ProductService {
               sellPrice: dto.sellPrice,
               comparePrice: dto.comparePrice,
               costPrice: dto.comparePrice,
+            },
+            select: {
+              id: true,
+              productProperties: {
+                select: {
+                  id: true,
+                  name: true,
+                  position: true,
+                  values: true,
+                },
+              },
             },
           });
           // Update product category
@@ -1376,6 +1402,7 @@ export class ProductService {
           const deleteTags = allProductTags.filter((pTag) =>
             dto.deleteTags.includes(pTag.name),
           );
+
           await p.productTag.deleteMany({
             where: {
               productId: dto.id,
@@ -1384,6 +1411,87 @@ export class ProductService {
               },
             },
           });
+
+          console.log('new variant ', dto.newVariants);
+
+          // Tạo variant mới
+          if (dto.newVariants.length > 0) {
+            await p.productVariants.createMany({
+              data: dto.newVariants.map((item) => ({
+                productId: updateProduct.id,
+                title: item.title,
+                barCode: item.barCode ?? null,
+                comparePrice: item.comparePrice,
+                costPrice: item.costPrice,
+                option1: item.option1 ?? null,
+                option2: item.option2 ?? null,
+                option3: item.option3 ?? null,
+                sellPrice: item.sellPrice,
+                skuCode: item.skuCode ?? null,
+                unit: item.unit ?? null,
+              })),
+            });
+          }
+
+          // Cập nhật lại options
+          for (const option of dto.options) {
+            await p.productProperties.update({
+              where: {
+                id: option.id,
+              },
+              data: {
+                name: option.name,
+                position: option.position,
+              },
+            });
+            const values = option.values;
+            const currentValues = updateProduct.productProperties
+              .find((prop) => prop.position === option.position)
+              .values.map((v) => v.value);
+
+            const addValues = values.filter((v) => !currentValues.includes(v));
+            const deleteValues = currentValues.filter(
+              (v) => !values.includes(v),
+            );
+
+            console.log('addValue', addValues);
+            console.log('deleteValues', deleteValues);
+            console.log('deleteVariantIds', dto.deleteVariantIds);
+
+            if (addValues.length > 0) {
+              for (const addValue of addValues) {
+                await p.productPropertyValues.create({
+                  data: {
+                    value: addValue,
+                    productPropertyId: option.id,
+                  },
+                });
+              }
+            }
+            if (deleteValues.length > 0) {
+              await p.productPropertyValues.deleteMany({
+                where: {
+                  value: {
+                    in: deleteValues,
+                  },
+                },
+              });
+            }
+          }
+
+          // Cập nhật lại variant đã xóa
+          if (dto.deleteVariantIds.length > 0) {
+            await p.productVariants.updateMany({
+              where: {
+                id: {
+                  in: dto.deleteVariantIds,
+                },
+              },
+              data: {
+                void: true,
+              },
+            });
+          }
         },
         { timeout: 10000 },
       );
@@ -1393,6 +1501,22 @@ export class ProductService {
       throw new InternalServerErrorException(
         error.message ?? 'Đã xảy ra lỗi khi cập nhật thông tin sản phẩm',
       );
+    }
+  }
+
+  async delete(id: number, res: Response) {
+    try {
+      await this.prisma.product.update({
+        where: {
+          id: id,
+        },
+        data: {
+          void: true,
+        },
+      });
+      return res.status(200).json({ message: 'Đã xóa sản phẩm' });
+    } catch (error) {
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
   }
 

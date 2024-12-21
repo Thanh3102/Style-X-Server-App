@@ -1,5 +1,3 @@
-import { collections } from './collections';
-
 type Product = {
   name: string;
   costPrice: number;
@@ -40,7 +38,7 @@ export const generateProduct = (
   categoryName: string,
 ): Product => {
 
-  const price = generateRandomPrice(10000, 10000000)
+  const price = generateRandomPrice(30000, 6e6)
 
   const name = `${categoryName} - ${Math.random().toString(36).substring(10)}`;
   const costPrice = price;

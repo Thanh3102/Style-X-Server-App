@@ -9,8 +9,47 @@ import {
   InventoryTransactionAction,
   InventoryTransactionType,
 } from 'src/utils/types';
+import { permissionSections } from './seed-data/permission';
 
 const prisma = new PrismaClient();
+
+async function createPermission() {
+  for (const section of permissionSections) {
+    await prisma.permissionSection.create({
+      data: {
+        name: section.section,
+        permissions: {
+          createMany: {
+            data: section.permissions,
+          },
+        },
+      },
+    });
+  }
+}
+
+async function createAdminRole() {
+  const permissions = await prisma.permission.findMany({
+    select: {
+      id: true,
+    },
+  });
+
+  await prisma.role.create({
+    data: {
+      name: 'Admin',
+      isEditable: false,
+      isDeletable: false,
+      rolePermissions: {
+        createMany: {
+          data: permissions.map((perm) => ({
+            permissionId: perm.id,
+          })),
+        },
+      },
+    },
+  });
+}
 
 async function createSystemAccount() {
   for (let acc of accounts) {
@@ -25,8 +64,9 @@ async function createSystemAccount() {
         dateOfBirth: new Date(),
         email: '',
         gender: true,
-        nationality: '',
+        // nationality: '',
         phoneNumber: '',
+        roleId: 1,
       },
     });
   }
@@ -124,6 +164,8 @@ async function createProducts() {
 }
 
 async function main() {
+  await createPermission();
+  await createAdminRole();
   await createSystemAccount();
   await createWarehouse();
   await createCollections();

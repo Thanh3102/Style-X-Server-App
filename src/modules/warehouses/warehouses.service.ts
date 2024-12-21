@@ -13,7 +13,7 @@ export class WarehousesService {
         name: true,
         code: true,
         address: true,
-        country: true,
+        // country: true,
         province: true,
         district: true,
         ward: true,

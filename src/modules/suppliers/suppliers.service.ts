@@ -15,8 +15,12 @@ import { TagsService } from '../tags/tags.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { EmployeesService } from '../employees/employees.service';
 import { QueryParams } from 'src/utils/types';
-import { convertParamsToCondition } from 'src/utils/helper/DateHelper';
+import {
+  convertParamsToCondition,
+  tranformCreatedOnParams,
+} from 'src/utils/helper/DateHelper';
 import { isInteger } from 'src/utils/helper/StringHelper';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SuppliersService {
@@ -296,95 +300,40 @@ export class SuppliersService {
     const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let condition: any = {
-      query: {},
-      created: {},
-      assignedIds: {},
-      default: {
-        void: false,
-      },
+    const where: Prisma.SupplierWhereInput = {
+      void: false,
     };
 
     if (query) {
-      condition.query = {
-        OR: [
-          {
-            name: {
-              contains: query,
-            },
+      where.OR = [
+        {
+          name: {
+            contains: query,
           },
-          {
-            code: {
-              contains: query,
-            },
+        },
+        {
+          code: {
+            contains: query,
           },
-          {
-            phoneNumber: {
-              contains: query,
-            },
+        },
+        {
+          phoneNumber: {
+            contains: query,
           },
-        ],
-      };
+        },
+      ];
     }
 
-    if (createdOn) {
-      condition.created = convertParamsToCondition(createdOn);
-    }
-
-    if (createdOnMin || createdOnMax) {
-      if (createdOnMin && createdOnMax) {
-        const [minDD, minMM, minYYYY] = createdOnMin.split('/');
-        const [maxDD, maxMM, maxYYYY] = createdOnMin.split('/');
-        condition.created = {
-          createdAt: {
-            gte: new Date(
-              Number(minYYYY),
-              Number(minMM) - 1,
-              Number(minDD),
-              0,
-              0,
-              0,
-            ),
-            lte: new Date(
-              Number(maxYYYY),
-              Number(maxMM) - 1,
-              Number(maxDD),
-              23,
-              59,
-              59,
-            ),
-          },
-        };
-      } else if (createdOnMin) {
-        const [minDD, minMM, minYYYY] = createdOnMin.split('/');
-
-        condition.created = {
-          createdAt: {
-            gte: new Date(
-              Number(minYYYY),
-              Number(minMM) - 1,
-              Number(minDD),
-              0,
-              0,
-              0,
-            ),
-          },
-        };
-      } else if (createdOnMax) {
-        const [maxDD, maxMM, maxYYYY] = createdOnMax.split('/');
-
-        condition.created = {
-          createdAt: {
-            lte: new Date(
-              Number(maxYYYY),
-              Number(maxMM) - 1,
-              Number(maxDD),
-              23,
-              59,
-              59,
-            ),
-          },
-        };
+    if (createdOn || createdOnMin || createdOnMax) {
+      const { startDate, endDate } = tranformCreatedOnParams(
+        createdOn,
+        createdOnMin,
+        createdOnMax,
+      );
+      if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = startDate;
+        if (endDate) where.createdAt.lte = endDate;
       }
     }
 
@@ -395,26 +344,14 @@ export class SuppliersService {
         if (!isNaN(Number(v))) values.add(Number(v));
       }
 
-      condition.assignedIds = {
-        assignedId: {
-          in: Array.from(values),
-        },
+      where.assignedId = {
+        in: Array.from(values),
       };
     }
 
     if (active) {
-      condition.default = {
-        ...condition.default,
-        active: active === 'true',
-      };
+      where.active = active === 'true';
     }
-
-    let whereCondition = {
-      ...condition.default,
-      ...condition.query,
-      ...condition.created,
-      ...condition.assignedIds,
-    };
 
     try {
       const suppliers = await this.prisma.supplier.findMany({
@@ -426,13 +363,13 @@ export class SuppliersService {
           phoneNumber: true,
           email: true,
         },
-        where: whereCondition,
+        where: where,
         take: limit,
         skip: skip,
       });
 
       const countSupplier = await this.prisma.supplier.count({
-        where: whereCondition,
+        where: where,
       });
       const totalPage = Math.floor(countSupplier / limit);
 
@@ -500,9 +437,29 @@ export class SuppliersService {
 
       const { password, ...assignedData } = assigner;
 
+      const receives = await this.prisma.receiveInventory.findMany({
+        where: {
+          supplierId: supplier.id,
+          void: false,
+        },
+        select: {
+          id: true,
+          code: true,
+          status: true,
+          transactionStatus: true,
+          totalReceipt: true,
+          totalItems: true,
+          transactionRemainAmount: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
       return res
         .status(200)
-        .json({ ...supplier, tags, assigned: { ...assignedData } });
+        .json({ ...supplier, tags, assigned: { ...assignedData }, receives });
     } catch (error) {
       // console.log(error);
       return res.status(500).json({ error: error.message });

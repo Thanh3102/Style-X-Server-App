@@ -11,20 +11,22 @@ datasource db {
 model Employee {
   id                Int       @id @default(autoincrement())
   code              String    @unique
-  username          String    @unique
+  username          String
   password          String
   name              String
-  email             String    @unique
-  phoneNumber       String    @unique @map("phone_number")
+  email             String
+  phoneNumber       String    @map("phone_number")
   gender            Boolean
   dateOfBirth       DateTime  @map("date_of_birth") @db.Date
   isEmployed        Boolean   @default(true) @map("is_employed")
   void              Boolean   @default(false)
   lastLoginAt       DateTime? @map("last_login_at")
   createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at")
   createdEmployeeId Int?      @map("created_employee_id")
+  roleId            Int
 
+  role                    Role               @relation("EmployeeRole", references: [id], fields: [roleId])
   creator                 Employee?          @relation("EmployeeCreator", fields: [createdEmployeeId], references: [id])
   createdEmployees        Employee[]         @relation("EmployeeCreator")
   lastUpdateSuppliers     Supplier[]         @relation("supplierLastUpdateUser")
@@ -75,7 +77,7 @@ model Collection {
 
 model Product {
   id               Int      @id @default(autoincrement())
-  name             String   @unique
+  name             String
   skuCode          String?  @map("sku_code")
   barCode          String?  @map("bar_code")
   unit             String?
@@ -115,7 +117,7 @@ model ProductProperties {
   position  Int    @db.TinyInt
   productId Int    @map("product_id")
 
-  product Product                 @relation("ProductProperties", references: [id], fields: [productId])
+  product Product                 @relation("ProductProperties", references: [id], fields: [productId], onDelete: Cascade)
   values  ProductPropertyValues[] @relation("ProductProperties")
 
   @@unique([productId, name])
@@ -127,7 +129,7 @@ model ProductPropertyValues {
   value String
 
   productPropertyId Int               @map("product_property_id")
-  productProperty   ProductProperties @relation("ProductProperties", fields: [productPropertyId], references: [id])
+  productProperty   ProductProperties @relation("ProductProperties", fields: [productPropertyId], references: [id], onDelete: Cascade)
 
   @@unique([value, productPropertyId])
   @@map("product_property_values")
@@ -513,13 +515,14 @@ model DiscountCategory {
 
 model Customer {
   id           String    @id @default(uuid())
+  code         String    @unique
   name         String
   email        String    @unique
   password     String
   gender       String
   dob          DateTime  @db.Date
-  createAt     DateTime  @default(now()) @map("create_at")
-  updateAt     DateTime  @updatedAt @map("update_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   lastModifyAt DateTime  @default(now()) @map("last_modify_at")
   lastLoginAt  DateTime? @map("last_login_at")
 
@@ -539,7 +542,7 @@ model CustomerVerify {
   otpExpiry DateTime
   isVerify  Boolean  @default(false)
   attemps   Int      @default(0)
-  createAt  DateTime @default(now())
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("customer_verify")
 }
@@ -697,16 +700,16 @@ model OrderItemApplyDiscount {
 }
 
 model OrderItemSource {
-  id          Int               @id @default(autoincrement())
+  id          Int  @id @default(autoincrement())
   quantity    Int
-  costPrice   Int               @map("cost_price")
-  orderItemId Int               @map("order_item_id")
-  receiveId   Int?              @map("receive_id")
-  warehouseId Int               @map("warehouse_id")
-  
-  orderItem   OrderItem         @relation("OrderItemSource", references: [id], fields: [orderItemId], onDelete: Cascade)
-  receive     ReceiveInventory? @relation("OrderReceiveSource", references: [id], fields: [receiveId])
-  warehouse   Warehouse         @relation("OrderWarehouseSource", references: [id], fields: [warehouseId])
+  costPrice   Int  @map("cost_price")
+  orderItemId Int  @map("order_item_id")
+  receiveId   Int? @map("receive_id")
+  warehouseId Int  @map("warehouse_id")
+
+  orderItem OrderItem         @relation("OrderItemSource", references: [id], fields: [orderItemId], onDelete: Cascade)
+  receive   ReceiveInventory? @relation("OrderReceiveSource", references: [id], fields: [receiveId])
+  warehouse Warehouse         @relation("OrderWarehouseSource", references: [id], fields: [warehouseId])
 
   @@map("order_item_source")
 }
@@ -752,4 +755,47 @@ model OrderApplyVoucher {
   order    Order    @relation("OrderVoucher", fields: [orderId], references: [id], onDelete: Cascade)
 
   @@map("order_apply_voucher")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  createdAt   DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  isEditable  Boolean
+  isDeletable Boolean
+
+  rolePermissions RolePermission[] @relation("RolePermission_Role")
+  employees       Employee[]       @relation("EmployeeRole")
+}
+
+model PermissionSection {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  permissions Permission[] @relation("Permission_PermisstionSection")
+
+  @@map("permission_section")
+}
+
+model Permission {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  displayName String
+  sectionId   Int
+
+  section         PermissionSection @relation("Permission_PermisstionSection", references: [id], fields: [sectionId])
+  rolePermissions RolePermission[]  @relation("RolePermission_Permission")
+}
+
+model RolePermission {
+  permissionId Int
+  roleId       Int
+
+  permission Permission @relation("RolePermission_Permission", references: [id], fields: [permissionId], onDelete: Cascade)
+  role       Role       @relation("RolePermission_Role", references: [id], fields: [roleId], onDelete: Cascade)
+
+  @@id([permissionId, roleId])
+  @@unique([permissionId, roleId])
+  @@map("role_permission")
 }

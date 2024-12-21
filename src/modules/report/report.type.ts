@@ -66,3 +66,29 @@ export type ReportRevenueDetailResponse = {
     cost: number; // Giá vốn
   }>;
 };
+
+export type ReportProductRevenueDetailResponse = Array<{
+  product: {
+    id: number;
+    name: string;
+  };
+  totalNumberOfOrder: number; // Số lượng đơn hàng
+  totalNumberOfItem: number; // Số lượng đặt hàng
+  totalGoodValue: number; // Tiền hàng
+  totalDiscount: number; // Giảm giá
+  totalNetRevenue: number; // Doanh thu thuần = Tiền hàng - khuyến mại
+  totalGrossProfit: number; // Lợi nhuận gộp = Doanh thu thuần - giá vốn
+  totalAverageOrderValue: number; // Giá trị đơn trung bình
+  totalCost: number; // Giá vốn
+  reports: Array<{
+    time: string;
+    numberOfOrder: number; // Số lượng đơn hàng
+    numberOfItem: number; // Số lượng đặt hàng
+    goodValue: number; // Tiền hàng
+    discount: number; // Giảm giá
+    netRevenue: number; // Doanh thu thuần = Tiền hàng - khuyến mại
+    grossProfit: number; // Lợi nhuận gộp = Doanh thu thuần - giá vốn
+    averageOrderValue: number; // Giá trị đơn trung bình
+    cost: number; // Giá vốn
+  }>;
+}>;
