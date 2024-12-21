@@ -16,7 +16,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateOTP } from 'src/utils/helper/OtpGenerator';
 import { MailService } from '../mail/mail.service';
-import { log } from 'handlebars';
+import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 
 @Injectable()
 export class AuthService {
@@ -28,40 +28,40 @@ export class AuthService {
   ) {}
 
   async employeeSignIn(dto: EmployeeSignInDTO, res: Response) {
-    const employee = await this.employeeService.verifyUser(
-      dto.username,
-      dto.password,
-    );
-
-    if (!employee)
-      throw new InternalServerErrorException(
-        'Đang xảy ra lỗi trong quá trình đăng nhập',
+    try {
+      const employee = await this.employeeService.verifyUser(
+        dto.username,
+        dto.password,
       );
 
-    await this.employeeService.updateLastLogin(employee.id);
+      await this.employeeService.updateLastLogin(employee.id);
 
-    const { accessToken, refreshToken } = await this.generateToken(
-      {
-        id: employee.id,
-        username: employee.username,
-        email: employee.email,
-      },
-      dto.isRemember,
-    );
+      const { accessToken, refreshToken } = await this.generateToken(
+        {
+          id: employee.id,
+          username: employee.username,
+          email: employee.email,
+        },
+        dto.isRemember,
+      );
 
-    return res.status(200).json({
-      user: {
-        id: employee.id,
-        username: employee.username,
-        name: employee.name,
-        email: employee.email,
-      },
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-      expiredIn:
-        new Date().getTime() +
-        parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRED_TIME_NUMBER),
-    });
+      return res.status(200).json({
+        user: {
+          id: employee.id,
+          username: employee.username,
+          name: employee.name,
+          email: employee.email,
+        },
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        expiredIn:
+          new Date().getTime() +
+          parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRED_TIME_NUMBER),
+      });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: error.message });
+    }
   }
 
   async customerSignIn(dto: CustomerSignInDTO, res: Response) {
@@ -186,11 +186,16 @@ export class AuthService {
           // Tạo otp
           const otp = generateOTP();
 
+          const dob = new Date(dto.dob);
+          const dateOfBirth = new Date(
+            Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate()),
+          );
+
           await p.customerVerify.create({
             data: {
               email: dto.email,
               name: dto.name,
-              dob: dto.dob,
+              dob: dateOfBirth,
               gender: dto.gender,
               otp: otp,
               otpExpiry: new Date(Date.now() + 10 * 60 * 1000),
@@ -233,8 +238,10 @@ export class AuthService {
 
       if (customerVerify.otp === dto.otp) {
         await this.prisma.$transaction(async (p) => {
+          const code = await generateCustomID('KH', 'customer');
           await p.customer.create({
             data: {
+              code: code,
               name: customerVerify.name,
               password: customerVerify.password,
               dob: customerVerify.dob,
@@ -261,6 +268,11 @@ export class AuthService {
       return res
         .status(200)
         .json({ message: 'Xác thực tài khoản thành công.' });
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    }
   }
 }

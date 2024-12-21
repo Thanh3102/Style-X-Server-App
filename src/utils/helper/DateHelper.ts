@@ -1,6 +1,5 @@
 import { DateFilterOptionValue } from '../types';
 
-
 export const isStringDate = (string: string) => {
   const date = new Date(string);
   return !isNaN(date.getTime());
@@ -214,8 +213,8 @@ export const convertParamsToCondition = (createdOn: string) => {
           lte: new Date(lastYear.end.setHours(23, 59, 59)),
         },
       };
-    
-      default:
+
+    default:
       return {
         createdAt: {
           gte: new Date(getToday().setHours(0, 0, 0)),
@@ -223,4 +222,92 @@ export const convertParamsToCondition = (createdOn: string) => {
         },
       };
   }
+};
+
+export const tranformCreatedOnParams = (
+  createdOn?: string,
+  createdOnMin?: string,
+  createdOnMax?: string,
+) => {
+  let startDate: Date = undefined;
+  let endDate: Date = undefined;
+
+  switch (createdOn as DateFilterOptionValue) {
+    case DateFilterOptionValue.TODAY:
+      startDate = getToday();
+      endDate = new Date(getToday().setHours(23, 59, 59));
+      break;
+
+    case DateFilterOptionValue.YESTERDAY:
+      startDate = getPreviousDay(1);
+      endDate = new Date(getPreviousDay(1).setHours(23, 59, 59));
+      break;
+
+    case DateFilterOptionValue.DAY_LAST_7:
+      startDate = getPreviousDay(6);
+      endDate = new Date(getToday().setHours(23, 59, 59));
+      break;
+
+    case DateFilterOptionValue.DAY_LAST_30:
+      startDate = getPreviousDay(30);
+      endDate = new Date(getToday().setHours(23, 59, 59));
+      break;
+
+    case DateFilterOptionValue.THIS_WEEK:
+      const thisWeek = getThisWeekStartEnd();
+
+      (startDate = thisWeek.start),
+        (endDate = new Date(thisWeek.end.setHours(23, 59, 59)));
+      break;
+
+    case DateFilterOptionValue.LAST_WEEK:
+      const lastWeek = getLastWeekStartEnd();
+
+      (startDate = lastWeek.start),
+        (endDate = new Date(lastWeek.end.setHours(23, 59, 59)));
+      break;
+
+    case DateFilterOptionValue.THIS_MONTH:
+      const thisMonth = getThisMonthStartEnd();
+
+      (startDate = thisMonth.start),
+        (endDate = new Date(thisMonth.end.setHours(23, 59, 59)));
+      break;
+
+    case DateFilterOptionValue.LAST_MONTH:
+      const lastMonth = getLastMonthStartEnd();
+
+      (startDate = lastMonth.start),
+        (endDate = new Date(lastMonth.end.setHours(23, 59, 59)));
+      break;
+
+    case DateFilterOptionValue.THIS_YEAR:
+      const thisYear = getThisYearStartEnd();
+
+      (startDate = thisYear.start),
+        (endDate = new Date(thisYear.end.setHours(23, 59, 59)));
+      break;
+
+    case DateFilterOptionValue.LAST_YEAR:
+      const lastYear = getLastYearStartEnd();
+      (startDate = lastYear.start),
+        (endDate = new Date(lastYear.end.setHours(23, 59, 59)));
+      break;
+
+    // default:
+    //   startDate = getToday();
+    //   endDate = new Date(getToday().setHours(23, 59, 59));
+  }
+
+  if (createdOnMin) {
+    const [day, month, year] = createdOnMin.split('/');
+    startDate = new Date(`${year}-${month}-${day}`);
+  }
+
+  if (createdOnMax) {
+    const [day, month, year] = createdOnMax.split('/');
+    endDate = new Date(`${year}-${month}-${day}`);
+  }
+
+  return { startDate, endDate };
 };

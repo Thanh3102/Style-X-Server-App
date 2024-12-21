@@ -92,6 +92,25 @@ export type UpdateProductDTO = {
   sellPrice: number;
   costPrice: number;
   comparePrice: number;
+  deleteVariantIds: number[];
+  options: Array<{
+    id: number;
+    name: string;
+    position: number;
+    values: string[];
+  }>;
+  newVariants: Array<{
+    barCode: undefined | string;
+    comparePrice: number;
+    costPrice: number;
+    option1: string;
+    option2: string;
+    option3: string;
+    sellPrice: number;
+    skuCode: string;
+    title: string;
+    unit: string | undefined;
+  }>;
 };
 
 export type UpdateVariantDTO = {

@@ -46,7 +46,7 @@ export class ProductController {
 
   @Public()
   @Get('/public/search')
-  getProductPublicSearch(@Query("q") query: string, @Res() res) {
+  getProductPublicSearch(@Query('q') query: string, @Res() res) {
     return this.productService.searchProductPublic(query, res);
   }
 
@@ -198,8 +198,8 @@ export class ProductController {
     return this.productService.update(dto, req, res);
   }
 
-  @Delete('/')
-  delete() {
-    return null;
+  @Delete('/:productId')
+  delete(@Param('productId') id: string, @Res() res) {
+    return this.productService.delete(parseInt(id), res);
   }
 }

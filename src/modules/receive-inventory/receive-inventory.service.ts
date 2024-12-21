@@ -26,6 +26,8 @@ import {
 import { Response } from 'express';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { TagType } from '../tags/tag.type';
+import { Prisma } from '@prisma/client';
+import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
 
 @Injectable()
 export class ReceiveInventoryService {
@@ -499,18 +501,79 @@ export class ReceiveInventoryService {
   }
 
   async get(queryParams: QueryParams, res: Response) {
-    const { page: pg, limit: lim, query } = queryParams;
+    const {
+      page: pg,
+      limit: lim,
+      query,
+      createdOn,
+      createdOnMax,
+      createdOnMin,
+      receiveStatus,
+      receiveTransactionStatus,
+    } = queryParams;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
-    const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
+    const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let whereConditon = {
+    let whereCondition: Prisma.ReceiveInventoryWhereInput = {
       void: false,
     };
 
+    if (query) {
+      whereCondition.OR = [
+        {
+          code: {
+            startsWith: query,
+          },
+        },
+        {
+          warehouse: {
+            name: {
+              startsWith: query,
+            },
+          },
+        },
+        {
+          supplier: {
+            name: {
+              startsWith: query,
+            },
+          },
+        },
+        {
+          createUser: {
+            name: {
+              startsWith: query,
+            },
+          },
+        },
+      ];
+    }
+
+    if (receiveStatus) {
+      whereCondition.status = receiveStatus;
+    }
+
+    if (receiveTransactionStatus) {
+      whereCondition.transactionStatus = receiveTransactionStatus;
+    }
+
+    if (createdOn || createdOnMin || createdOnMax) {
+      const { startDate, endDate } = tranformCreatedOnParams(
+        createdOn,
+        createdOnMin,
+        createdOnMax,
+      );
+      if (startDate || endDate) {
+        whereCondition.createdAt = {};
+        if (startDate) whereCondition.createdAt.gte = startDate;
+        if (endDate) whereCondition.createdAt.lte = endDate;
+      }
+    }
+
     const receives = await this.prisma.receiveInventory.findMany({
-      where: whereConditon,
+      where: whereCondition,
       select: {
         id: true,
         code: true,
@@ -548,15 +611,15 @@ export class ReceiveInventoryService {
     });
 
     const countReceives = await this.prisma.receiveInventory.count({
-      where: whereConditon,
+      where: whereCondition,
     });
 
-    const totalPage = Math.floor(countReceives / limit);
+    const totalPage = Math.ceil(countReceives / limit);
 
     return res.json({
       receiveInventory: receives,
       paginition: {
-        total: countReceives % limit == 0 ? totalPage : totalPage + 1,
+        total: totalPage,
         count: countReceives,
         page: page,
         limit: limit,

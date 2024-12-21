@@ -27,6 +27,7 @@ import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { MailService } from '../mail/mail.service';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
+import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
 
 @Injectable()
 export class OrderService {
@@ -1886,8 +1887,15 @@ export class OrderService {
   }
 
   async getOrderList(params: QueryParams) {
-    const { page: pg, limit: lim } = params;
-
+    const {
+      page: pg,
+      limit: lim,
+      query,
+      orderStatus,
+      createdOn,
+      createdOnMax,
+      createdOnMin,
+    } = params;
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
     const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
@@ -1898,6 +1906,43 @@ export class OrderService {
         not: null,
       },
     };
+
+    if (query) {
+      where.OR = [
+        {
+          name: {
+            startsWith: query,
+          },
+        },
+        {
+          phoneNumber: {
+            startsWith: query,
+          },
+        },
+        {
+          code: {
+            startsWith: query,
+          },
+        },
+      ];
+    }
+
+    if (orderStatus) {
+      where.status = orderStatus;
+    }
+
+    if (createdOn || createdOnMin || createdOnMax) {
+      const { startDate, endDate } = tranformCreatedOnParams(
+        createdOn,
+        createdOnMin,
+        createdOnMax,
+      );
+      if (startDate || endDate) {
+        where.createdAt = {};
+        if (startDate) where.createdAt.gte = startDate;
+        if (endDate) where.createdAt.lte = endDate;
+      }
+    }
 
     const orderBy: Prisma.OrderOrderByWithRelationInput = {
       createdAt: 'desc',

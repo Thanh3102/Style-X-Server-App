@@ -32,6 +32,11 @@ export class ReportController {
     return this.reportService.getRevenueDetailReport(queryParams, res);
   }
 
+  @Get('/detail/product')
+  getProductRevenueDetailReport(@Query() queryParams: QueryParams, @Res() res) {
+    return this.reportService.getProductRevenueDetailReport(queryParams, res);
+  }
+
   @Get('/best-sale')
   getBestSale(@Query() queryParams: QueryParams, @Res() res) {
     return this.reportService.getBestSaleReport(queryParams, res);

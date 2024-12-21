@@ -13,7 +13,7 @@ import { Response } from 'express';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { QueryParams } from 'src/utils/types';
 import { ProductPublic, ProductPublicVariant } from '../product/product';
-import { CartItem } from '@prisma/client';
+import { CartItem, Prisma } from '@prisma/client';
 
 @Injectable()
 export class DiscountService {
@@ -287,15 +287,33 @@ export class DiscountService {
   }
 
   async get(queryParams: QueryParams, res: Response) {
-    const { page: pg, limit: lim, query } = queryParams;
+    const { page: pg, limit: lim, query, mode, active, type } = queryParams;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
-    const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
+    const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let whereConditon = {
+    let whereConditon: Prisma.DiscountWhereInput = {
       void: false,
     };
+
+    if (query) {
+      whereConditon.title = {
+        startsWith: query,
+      };
+    }
+
+    if (mode) {
+      whereConditon.mode = mode;
+    }
+
+    if (type) {
+      whereConditon.type = type;
+    }
+
+    if (active) {
+      whereConditon.active = active === 'true';
+    }
 
     try {
       const discounts = await this.prisma.discount.findMany({
@@ -328,12 +346,12 @@ export class DiscountService {
         where: whereConditon,
       });
 
-      const totalPage = Math.floor(countTotal / limit);
+      const totalPage = Math.ceil(countTotal / limit);
 
       return res.json({
         discounts: discounts,
         paginition: {
-          total: countTotal % limit == 0 ? totalPage : totalPage + 1,
+          total: totalPage,
           count: countTotal,
           page: page,
           limit: limit,
@@ -1033,5 +1051,4 @@ export class DiscountService {
       console.log(error);
     }
   }
-
 }
