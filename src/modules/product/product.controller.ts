@@ -1,4 +1,4 @@
-import {
+  import {
   BadRequestException,
   Body,
   Controller,
@@ -33,7 +33,7 @@ import {
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { Public } from 'src/decorators/Public.decorator';
+import { Public } from 'src/decorators/public.decorator';
 import { CreateCollectionDTO, PublicProductParams } from './product';
 import { Permissions } from 'src/decorators/permission.decorator';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
