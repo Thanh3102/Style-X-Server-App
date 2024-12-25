@@ -2,7 +2,7 @@ import { Body, Controller, Post, Req, Res, UseInterceptors } from '@nestjs/commo
 import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { CustomerSignInDTO, CustomerSignUpDTO, EmployeeSignInDto, RefreshTokenDTO, VerifySignInDTO } from './auth.dto';
-import { Public } from 'src/decorators/Public.decorator';
+import { Public } from 'src/decorators/public.decorator';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 
 @UseInterceptors(LoggerInterceptor)

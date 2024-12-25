@@ -22,7 +22,7 @@ import {
   ConfirmDeliveryDto,
   CreateTempOrderDto,
 } from './order.dto';
-import { Public } from 'src/decorators/Public.decorator';
+import { Public } from 'src/decorators/public.decorator';
 import { OrderPermission, QueryParams } from 'src/utils/types';
 import { Response } from 'express';
 import { PermissionsGuard } from 'src/guards/permissions.guard';

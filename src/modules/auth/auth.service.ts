@@ -1,6 +1,5 @@
 import {
   Injectable,
-  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
