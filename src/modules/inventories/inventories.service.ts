@@ -12,6 +12,7 @@ import {
 } from 'src/utils/types';
 import { Response } from 'express';
 import { isInteger } from 'src/utils/helper/StringHelper';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class InventoriesService {
@@ -99,15 +100,20 @@ export class InventoriesService {
   }
 
   async getHistory(queryParams: QueryParams) {
-    const { page: pg, limit: lim, receiveIds, variantIds } = queryParams;
+    const {
+      page: pg,
+      limit: lim,
+      receiveIds,
+      variantIds,
+      warehouseIds,
+      type,
+    } = queryParams;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
     const limit = !isNaN(Number(lim)) ? Number(lim) : 50;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    const whereCondition: any = {};
-
-    console.log('Params', queryParams);
+    const whereCondition: Prisma.InventoryHistoryWhereInput = {};
 
     if (variantIds) {
       const ids = variantIds.split(',').map((id) => {
@@ -116,7 +122,6 @@ export class InventoriesService {
       });
 
       whereCondition.inventory = {
-        ...whereCondition.inventory,
         variant_id: {
           in: [...ids],
         },
@@ -133,7 +138,28 @@ export class InventoriesService {
       };
     }
 
-    console.log('Where condition', whereCondition);
+    if (warehouseIds) {
+      const ids = warehouseIds.split(',').map((id) => {
+        if (isInteger(id)) return parseInt(id);
+        return 0;
+      });
+
+      if (whereCondition.inventory) {
+        whereCondition.inventory.warehouse_id = {
+          in: [...ids],
+        };
+      } else {
+        whereCondition.inventory = {
+          warehouse_id: {
+            in: [...ids],
+          },
+        };
+      }
+    }
+
+    if (type) {
+      whereCondition.transactionType = type;
+    }
 
     const inventories = await this.prisma.inventoryHistory.findMany({
       where: whereCondition,
@@ -165,6 +191,12 @@ export class InventoriesService {
           },
         },
         receiveInventory: {
+          select: {
+            id: true,
+            code: true,
+          },
+        },
+        order: {
           select: {
             id: true,
             code: true,

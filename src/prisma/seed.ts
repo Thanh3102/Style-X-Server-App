@@ -73,14 +73,19 @@ async function createSystemAccount() {
 }
 
 async function createWarehouse() {
-  for (let warehouse of warehouses) {
-    await prisma.warehouse.create({
-      data: {
-        code: warehouse.code ?? (await generateCustomID('WH', 'warehouse')),
-        name: warehouse.name,
-      },
-    });
-  }
+  const code = await generateCustomID('WH', 'warehouse');
+  await prisma.warehouse.create({
+    data: {
+      code: code,
+      name: 'Kho khởi tạo',
+      address: '',
+      district: '',
+      email: '',
+      phoneNumber: '',
+      province: '',
+      ward: '',
+    },
+  });
 }
 
 async function createCollections() {

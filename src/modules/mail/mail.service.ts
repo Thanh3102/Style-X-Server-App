@@ -47,4 +47,17 @@ export class MailService {
       },
     });
   }
+
+  async sendResetPasswordLink(to: string, name: string, resetLink: string) {
+    await this.mailerService.sendMail({
+      to: to,
+      from: 'noreply <support@stylex.com>',
+      subject: 'Yêu cầu đặt lại mật khẩu',
+      template: './reset-password',
+      context: {
+        name: name,
+        resetLink: resetLink,
+      },
+    });
+  }
 }

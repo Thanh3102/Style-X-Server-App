@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Post,
   Put,
   Query,
   Req,
@@ -15,6 +16,7 @@ import { QueryParams } from 'src/utils/types';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { ChangePasswordDto, UpdateInfoDto } from './customer.type';
+import { Public } from 'src/decorators/Public.decorator';
 
 @UseGuards(JwtGuard)
 @UseInterceptors(LoggerInterceptor)
@@ -58,5 +60,20 @@ export class CustomerController {
     @Res() res,
   ) {
     return this.customerService.getDetail(customerId, query, res);
+  }
+
+  @Public()
+  @Post('/forget-password')
+  createForgetPasswordToken(@Body() dto: { email: string }, @Res() res) {
+    return this.customerService.createForgetPasswordToken(dto.email, res);
+  }
+
+  @Public()
+  @Post('/reset-password')
+  resetPassword(
+    @Body() dto: { token: string; newPassword: string },
+    @Res() res,
+  ) {
+    return this.customerService.resetPassword(dto.token, dto.newPassword, res);
   }
 }

@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { QueryParams } from 'src/utils/types';
@@ -11,10 +15,17 @@ import {
 import { OrderStatus } from '../order/order.type';
 import { Prisma } from '@prisma/client';
 import { comparePassword, hashPlainText } from 'src/utils/helper/bcryptHelper';
+import { MailService } from '../mail/mail.service';
+import { v4 as uuidv4 } from 'uuid';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class CustomerService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+    private jwtService: JwtService,
+  ) {}
 
   async get(queryParams: QueryParams, res: Response) {
     try {
@@ -132,7 +143,7 @@ export class CustomerService {
         case 'ascending':
           sortOrder.totalItemAfterDiscount = 'asc';
           break;
-        case 'ascending':
+        case 'descending':
           sortOrder.totalItemAfterDiscount = 'desc';
           break;
       }
@@ -352,6 +363,107 @@ export class CustomerService {
       return res
         .status(500)
         .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async createForgetPasswordToken(email: string, res: Response) {
+    try {
+      const customer = await this.prisma.customer.findFirst({
+        where: {
+          email: email,
+        },
+      });
+
+      if (!customer)
+        throw new NotFoundException('Email của bạn chưa được đăng ký');
+
+      await this.prisma.resetPasswordToken.deleteMany({
+        where: {
+          customerId: customer.id,
+        },
+      });
+
+      const uuid = uuidv4();
+      const token = await this.jwtService.sign(uuid, {
+        secret: process.env.JWT_RESET_PASSWORD_SECRET_KEY,
+      });
+      const resetLink = `${process.env.CLIENT_BASE_URL}/reset-password?token=${token}`;
+
+      await this.prisma.resetPasswordToken.create({
+        data: {
+          customerId: customer.id,
+          token: uuid,
+          expires: Date.now() + Number(process.env.RESET_PASSWORD_EXPIRES),
+        },
+      });
+
+      this.mailService.sendResetPasswordLink(
+        customer.email,
+        customer.name,
+        resetLink,
+      );
+
+      return res.status(200).json({
+        message:
+          'Yêu cầu đặt lại mật khẩu đã gửi. Vui lòng kiểm tra email của bạn',
+      });
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: error.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại' });
+    }
+  }
+
+  async resetPassword(
+    requestToken: string,
+    newPassword: string,
+    res: Response,
+  ) {
+    try {
+      let verifyPayload = null;
+      try {
+        const token = await this.jwtService.verify(requestToken, {
+          secret: process.env.JWT_RESET_PASSWORD_SECRET_KEY,
+        });
+        console.log('token', token);
+        verifyPayload = token;
+      } catch (error) {
+        console.log(error);
+        throw new BadRequestException(
+          'Yêu cầu không hợp lệ. Vui lòng tạo yêu cầu mới',
+        );
+      }
+
+      const findRecord = await this.prisma.resetPasswordToken.findFirst({
+        where: {
+          token: verifyPayload,
+        },
+      });
+
+      if (!findRecord || Date.now() > findRecord.expires) {
+        throw new NotFoundException(
+          'Yêu cầu không tồn tại hoặc đã hết hạn. Vui lòng tạo yêu cầu mới',
+        );
+      }
+
+      const hashPassword = await hashPlainText(newPassword);
+
+      await this.prisma.customer.update({
+        where: {
+          id: findRecord.customerId,
+        },
+        data: {
+          password: hashPassword,
+        },
+      });
+
+      return res.status(200).json({ message: 'Cập nhật mật khẩu thành công' });
+    } catch (error) {
+      console.log(error);
+      return res
+        .status(500)
+        .json({ message: error.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại' });
     }
   }
 }

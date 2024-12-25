@@ -25,14 +25,20 @@ import {
   UpdateVariantDTO,
 } from './product.dto';
 import { Response } from 'express';
-import { QueryParams } from 'src/utils/types';
+import {
+  CategoryPermission,
+  ProductPermission,
+  QueryParams,
+} from 'src/utils/types';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { Public } from 'src/decorators/Public.decorator';
 import { CreateCollectionDTO, PublicProductParams } from './product';
+import { Permissions } from 'src/decorators/permission.decorator';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
 
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, PermissionsGuard)
 @UseInterceptors(LoggerInterceptor)
 @Controller('product')
 export class ProductController {
@@ -77,6 +83,7 @@ export class ProductController {
   }
 
   @Get('/variant/:variantId')
+  @Permissions(ProductPermission.Access)
   getVariantDetail(@Param('variantId') variantId: string) {
     if (!isInteger(variantId))
       throw new BadRequestException('Mã phiên bản không hợp lệ');
@@ -84,6 +91,7 @@ export class ProductController {
   }
 
   @Post('/category')
+  @Permissions(CategoryPermission.Create)
   @UseInterceptors(FileInterceptor('image'))
   createCategories(
     @UploadedFile() image: Express.Multer.File,
@@ -102,6 +110,7 @@ export class ProductController {
   }
 
   @Post('/category/update')
+  @Permissions(CategoryPermission.Update)
   @UseInterceptors(FileInterceptor('image'))
   updateCategory(
     @UploadedFile() image: Express.Multer.File,
@@ -113,11 +122,13 @@ export class ProductController {
   }
 
   @Delete('/category/:id')
+  @Permissions(CategoryPermission.Delete)
   deleteCategory(@Param('id') id: string, @Res() res: Response) {
     return this.productService.deleteCategory(parseInt(id), res);
   }
 
   @Post('/collection')
+  @Permissions(CategoryPermission.Create)
   createCollection(
     @Body() dto: CreateCollectionDTO,
     @Req() req,
@@ -127,6 +138,7 @@ export class ProductController {
   }
 
   @Put('/collection')
+  @Permissions(CategoryPermission.Update)
   updateCollection(
     @Body() dto: UpdateCategoryDTO,
     @Req() req,
@@ -136,11 +148,13 @@ export class ProductController {
   }
 
   @Delete('/collection/:id')
+  @Permissions(CategoryPermission.Delete)
   deleteCollection(@Param('id') id: string, @Res() res: Response) {
     return this.productService.deleteCollection(parseInt(id), res);
   }
 
   @Put('/images/updateMainImage')
+  @Permissions(ProductPermission.Update)
   updateMainImage(
     @Body() { id, image }: { image: string; id: string },
     @Res() res: Response,
@@ -149,6 +163,7 @@ export class ProductController {
   }
 
   @UseInterceptors(FilesInterceptor('images'))
+  @Permissions(ProductPermission.Update)
   @Post('/images/add')
   addImages(
     @UploadedFiles() images: Array<Express.Multer.File>,
@@ -159,6 +174,7 @@ export class ProductController {
   }
 
   @Delete('/images')
+  @Permissions(ProductPermission.Update)
   deleteProductImage(
     @Body() { url, publicId }: { publicId: string; url: string },
     @Res() res,
@@ -167,21 +183,25 @@ export class ProductController {
   }
 
   @Put('/variant')
+  @Permissions(ProductPermission.Update)
   updateVariant(@Body() dto: UpdateVariantDTO, @Res() res: Response) {
     return this.productService.updateVariant(dto, res);
   }
 
   @Get('/:id')
+  @Permissions(ProductPermission.Access)
   getDetail(@Param() params, @Res() res: Response) {
     return this.productService.getDetail(parseInt(params.id), res);
   }
 
   @Get('/')
+  @Permissions(ProductPermission.Access)
   get(@Query() queryParams: QueryParams, @Res() res: Response) {
     return this.productService.get(queryParams, res);
   }
 
   @Post('/')
+  @Permissions(ProductPermission.Create)
   @UseInterceptors(FilesInterceptor('images'))
   create(
     @UploadedFiles() images: Array<Express.Multer.File>,
@@ -194,11 +214,13 @@ export class ProductController {
   }
 
   @Put('/')
+  @Permissions(ProductPermission.Update)
   update(@Body() dto: UpdateProductDTO, @Req() req, @Res() res) {
     return this.productService.update(dto, req, res);
   }
 
   @Delete('/:productId')
+  @Permissions(ProductPermission.Delete)
   delete(@Param('productId') id: string, @Res() res) {
     return this.productService.delete(parseInt(id), res);
   }

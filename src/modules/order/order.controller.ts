@@ -23,16 +23,25 @@ import {
   CreateTempOrderDto,
 } from './order.dto';
 import { Public } from 'src/decorators/Public.decorator';
-import { QueryParams } from 'src/utils/types';
+import { OrderPermission, QueryParams } from 'src/utils/types';
 import { Response } from 'express';
+import { PermissionsGuard } from 'src/guards/permissions.guard';
+import { Permissions } from 'src/decorators/permission.decorator';
 
-@UseGuards(JwtGuard)
+@UseGuards(JwtGuard, PermissionsGuard)
 @UseInterceptors(LoggerInterceptor)
 @Controller('order')
 export class OrderController {
   constructor(private orderService: OrderService) {}
 
+  @Public()
+  @Get('/vnpay_return')
+  vnpayReturn(@Req() req, @Res() res) {
+    return this.orderService.VNPAY_RETURN(req, res);
+  }
+
   @Put('/confirm/delivery')
+  @Permissions(OrderPermission.StatusUpdate)
   confirmDelivery(@Body() dto: ConfirmDeliveryDto, @Req() req, @Res() res) {
     return this.orderService.confirmDelivery(
       dto.orderId,
@@ -43,26 +52,31 @@ export class OrderController {
   }
 
   @Put('/cancel')
+  @Permissions(OrderPermission.Cancel)
   cancelOrderByAdmin(@Body() dto: CancelOrderDto, @Req() req, @Res() res) {
     return this.orderService.cancelOrderByAdmin(dto, req, res);
   }
 
   @Put('/confirm/payment')
+  @Permissions(OrderPermission.StatusUpdate)
   confirmPaymentReceived(@Body() dto: CancelOrderDto, @Req() req, @Res() res) {
     return this.orderService.confirmPaymentReceived(dto, req, res);
   }
 
   @Get('/')
+  @Permissions(OrderPermission.Access)
   getOrderList(@Query() query: QueryParams, @Res() res: Response) {
     return this.orderService.requestOrderList(query, res);
   }
 
   @Get('/admin/:orderId')
+  @Permissions(OrderPermission.Access)
   getOrderDetail(@Param('orderId') orderId, @Res() res: Response) {
     return this.orderService.requestOrderDetail(orderId, res);
   }
 
   @Delete('/admin/:orderId')
+  @Permissions(OrderPermission.Delete)
   deleteOrder(@Param('orderId') orderId, @Req() req, @Res() res: Response) {
     return this.orderService.deleteOrder(orderId, req, res);
   }
