@@ -56,7 +56,7 @@ model Category {
   updatedAt     DateTime @updatedAt @map("updated_at")
   collectionId  Int      @default(1) @map("collection_id")
 
-  collection         Collection         @relation("Category_Collection", references: [id], fields: [collectionId])
+  collection         Collection         @relation("Category_Collection", references: [id], fields: [collectionId], onDelete: Cascade)
   categories         ProductCategory[]  @relation("ProductCategory_Category")
   discountCategories DiscountCategory[] @relation("DiscountCategory_Category")
 
@@ -224,10 +224,12 @@ model InventoryHistory {
   changeUserId                Int?     @map("change_user_id")
   inventoryId                 Int      @map("inventory_id")
   receiveInventoryId          Int?     @map("receive_inventory_id")
+  orderId                     String?  @map("order_id")
 
   inventory        Inventory         @relation("InventoryHistory_Inventory", fields: [inventoryId], references: [id])
   changeUser       Employee?         @relation("InventoryHistoryChangeUser", references: [id], fields: [changeUserId])
   receiveInventory ReceiveInventory? @relation("InventoryHistory_Receive", references: [id], fields: [receiveInventoryId])
+  order            Order?            @relation("InventoryHistory_Order", references: [id], fields: [orderId])
 
   @@map("inventory_history")
 }
@@ -307,17 +309,18 @@ model Warehouse {
   id            Int      @id @default(autoincrement())
   name          String   @unique
   code          String   @unique
-  phoneNumber   String?  @map("phone_number")
-  email         String?
+  phoneNumber   String   @map("phone_number")
+  email         String
   // country       String?
-  province      String?
-  district      String?
-  ward          String?
-  address       String?
+  province      String
+  district      String
+  ward          String
+  address       String
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt
   createdUserId Int?     @map("created_user_id")
   updatedUserId Int?     @map("updated_user_id")
+  active        Boolean  @default(true)
 
   createdUser        Employee?          @relation("createdWarehouseUser", fields: [createdUserId], references: [id])
   updatedUser        Employee?          @relation("updatedWarehouseUser", fields: [updatedUserId], references: [id])
@@ -521,8 +524,8 @@ model Customer {
   password     String
   gender       String
   dob          DateTime  @db.Date
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
   lastModifyAt DateTime  @default(now()) @map("last_modify_at")
   lastLoginAt  DateTime? @map("last_login_at")
 
@@ -542,7 +545,7 @@ model CustomerVerify {
   otpExpiry DateTime
   isVerify  Boolean  @default(false)
   attemps   Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("customer_verify")
 }
@@ -635,11 +638,12 @@ model Order {
   customerId               String?
   void                     Boolean  @default(false)
 
-  items          OrderItem[]          @relation("Order_OrderItem")
-  customer       Customer?            @relation("Customer_Order", references: [id], fields: [customerId])
-  applyDiscounts OrderApplyDiscount[] @relation("OrderApplyDiscount")
-  history        OrderHistory[]       @relation("OrderHistory")
-  applyVouchers  OrderApplyVoucher[]  @relation("OrderVoucher")
+  items              OrderItem[]          @relation("Order_OrderItem")
+  customer           Customer?            @relation("Customer_Order", references: [id], fields: [customerId])
+  applyDiscounts     OrderApplyDiscount[] @relation("OrderApplyDiscount")
+  history            OrderHistory[]       @relation("OrderHistory")
+  applyVouchers      OrderApplyVoucher[]  @relation("OrderVoucher")
+  inventoryHistories InventoryHistory[]   @relation("InventoryHistory_Order")
   // transactions   OrderTransaction[]   @relation("OrderTransaction")
 }
 
@@ -764,6 +768,7 @@ model Role {
   updated_at  DateTime @updatedAt
   isEditable  Boolean
   isDeletable Boolean
+  void        Boolean  @default(false)
 
   rolePermissions RolePermission[] @relation("RolePermission_Role")
   employees       Employee[]       @relation("EmployeeRole")
@@ -798,4 +803,14 @@ model RolePermission {
   @@id([permissionId, roleId])
   @@unique([permissionId, roleId])
   @@map("role_permission")
+}
+
+model ResetPasswordToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  customerId String   @unique @map("customer_id")
+  expires    BigInt
+  createAt   DateTime @default(now())
+
+  @@map("reset_password_token")
 }

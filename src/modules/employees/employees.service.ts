@@ -15,6 +15,7 @@ import {
 } from './employees.type';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { Prisma } from '@prisma/client';
+import { isInteger } from 'src/utils/helper/StringHelper';
 
 @Injectable()
 export class EmployeesService {
@@ -36,7 +37,7 @@ export class EmployeesService {
   };
 
   async getUsers(res: Response, params: QueryParams) {
-    const { page: pg, limit: lim, query } = params;
+    const { page: pg, limit: lim, query, isEmployed, role } = params;
 
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
     const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
@@ -76,6 +77,14 @@ export class EmployeesService {
           },
         ],
       };
+    }
+
+    if (isEmployed) {
+      whereCondition.isEmployed = isEmployed === 'true';
+    }
+
+    if (role && isInteger(role)) {
+      whereCondition.roleId = parseInt(role);
     }
 
     const userCount = await this.prisma.employee.count({
@@ -183,6 +192,9 @@ export class EmployeesService {
               id: true,
               name: true,
             },
+            where: {
+              void: false,
+            },
           },
           _count: {
             select: {
@@ -191,7 +203,10 @@ export class EmployeesService {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          name: 'asc',
+        },
+        where: {
+          void: false,
         },
       });
 
@@ -336,9 +351,24 @@ export class EmployeesService {
 
   async deleteRole(roleId: number, res) {
     try {
-      await this.prisma.role.delete({
+      const countEmployee = await this.prisma.employee.count({
+        where: {
+          roleId: roleId,
+          void: false,
+        },
+      });
+
+      if (countEmployee > 0)
+        throw new BadRequestException(
+          'Không thể xóa do có nhân viên thuộc vai trò này',
+        );
+
+      await this.prisma.role.update({
         where: {
           id: roleId,
+        },
+        data: {
+          void: true,
         },
       });
 
@@ -531,6 +561,43 @@ export class EmployeesService {
       return res
         .status(500)
         .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async getCurrentPermissions(req, res: Response) {
+    try {
+      const employee = await this.prisma.employee.findUnique({
+        where: {
+          id: req.user.id,
+        },
+        select: {
+          role: {
+            select: {
+              rolePermissions: {
+                select: {
+                  permission: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!employee) throw new BadRequestException('User not found');
+
+      const permissions = [];
+      for (const perm of employee.role.rolePermissions) {
+        permissions.push(perm.permission.name);
+      }
+
+      return res.status(200).json(permissions);
+    } catch (error) {
+      console.log(error);
+      return res.status(200).json({ message: 'Đã xảy ra lỗi' });
     }
   }
 }

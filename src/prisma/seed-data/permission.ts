@@ -197,4 +197,25 @@ export const permissionSections = [
       },
     ],
   },
+  {
+    section: 'Kho hàng',
+    permissions: [
+      {
+        name: 'warehouse_access',
+        displayName: 'Xem danh sách kho hàng',
+      },
+      {
+        name: 'warehouse_create',
+        displayName: 'Thêm kho hàng',
+      },
+      {
+        name: 'warehouse_update',
+        displayName: 'Cập nhật thông tin kho hàng',
+      },
+      // {
+      //   name: 'warehouse_delete',
+      //   displayName: 'Xóa kho hàng',
+      // },
+    ],
+  },
 ];

@@ -459,6 +459,9 @@ export class OrderService {
         where: {
           warehouse_id: receiveItem.receiveInventory.warehouseId,
           variant_id: item.variant.id,
+          warehouse: {
+            active: true,
+          },
         },
       });
       if (itemQuantityNeedRemain === 0) break;
@@ -1268,7 +1271,7 @@ export class OrderService {
       );
     });
 
-    return res.status(200).json({ message: 'Tạo đơn hàng thành công. ' });
+    return res.status(200).json({ message: 'Tạo đơn hàng thành công.' });
   }
 
   async applyVoucher(orderId: string, voucherCode: string, res: Response) {
@@ -2132,6 +2135,7 @@ export class OrderService {
                     onHandQuantityChange: source.quantity * -1,
                     newOnHand: inventory.onHand * source.quantity,
                     changeUserId: req.user.id,
+                    orderId: orderId,
                   },
                 },
               },
@@ -2260,6 +2264,7 @@ export class OrderService {
                           ? source.quantity
                           : 0,
                       changeUserId: req.user.id,
+                      orderId: orderId,
                     },
                   },
                 },
@@ -2304,6 +2309,7 @@ export class OrderService {
               },
             },
             select: {
+              id: true,
               items: {
                 select: {
                   sources: true,
@@ -2338,6 +2344,7 @@ export class OrderService {
                       newOnTransaction:
                         inventory.onTransaction * source.quantity,
                       changeUserId: req.user.id,
+                      orderId: order.id,
                     },
                   },
                 },
@@ -2380,5 +2387,52 @@ export class OrderService {
         .status(500)
         .json(error.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại');
     }
+  }
+
+  private sortObject(obj) {
+    let sorted = {};
+    let str = [];
+    let key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        str.push(encodeURIComponent(key));
+      }
+    }
+    str.sort();
+    for (key = 0; key < str.length; key++) {
+      sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
+    }
+    return sorted;
+  }
+
+  async VNPAY_RETURN(req, res: Response) {
+    console.log('>>> Request query', req.query);
+    // let vnp_Params = req.query;
+
+    // let secureHash = vnp_Params['vnp_SecureHash'];
+
+    // delete vnp_Params['vnp_SecureHash'];
+    // delete vnp_Params['vnp_SecureHashType'];
+
+    // vnp_Params = this.sortObject(vnp_Params);
+
+    // let config = require('config');
+    // let tmnCode = config.get('vnp_TmnCode');
+    // let secretKey = config.get('vnp_HashSecret');
+
+    // let querystring = require('qs');
+    // let signData = querystring.stringify(vnp_Params, { encode: false });
+    // let crypto = require('crypto');
+    // let hmac = crypto.createHmac('sha512', secretKey);
+    // let signed = hmac.update(new Buffer(signData, 'utf-8')).digest('hex');
+
+    // if (secureHash === signed) {
+    //   //Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
+
+    //   res.render('success', { code: vnp_Params['vnp_ResponseCode'] });
+    // } else {
+    //   res.render('success', { code: '97' });
+    // }
+    return res.status(200).json(req.query);
   }
 }

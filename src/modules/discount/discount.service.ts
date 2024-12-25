@@ -271,6 +271,10 @@ export class DiscountService {
         },
       });
 
+      if (discount.void) {
+        throw new BadRequestException('Khuyến mại đã bị xóa');
+      }
+
       const discountProducts = await this.getEntitledProduct(discountId);
       const discountVariants = await this.getEntitledVariant(discountId);
       const discountCategorys = await this.getEntitledCategory(discountId);
