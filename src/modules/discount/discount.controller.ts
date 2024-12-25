@@ -19,7 +19,6 @@ import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { Response } from 'express';
 import { DiscountPermission, QueryParams } from 'src/utils/types';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { Public } from 'src/decorators/Public.decorator';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
 

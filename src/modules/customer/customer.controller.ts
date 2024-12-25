@@ -16,7 +16,7 @@ import { QueryParams } from 'src/utils/types';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { ChangePasswordDto, UpdateInfoDto } from './customer.type';
-import { Public } from 'src/decorators/Public.decorator';
+import { Public } from 'src/decorators/public.decorator';
 
 @UseGuards(JwtGuard)
 @UseInterceptors(LoggerInterceptor)
