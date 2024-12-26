@@ -188,3 +188,14 @@ export type OrderListResponseData = {
 export type ConfirmPaymentReceivedDto = {
   orderId: string;
 };
+
+export type PayOsParams = {
+  code: string;
+  id: string;
+  orderCode: string;
+  status: string;
+  cancel: boolean;
+  order: string;
+};
+
+

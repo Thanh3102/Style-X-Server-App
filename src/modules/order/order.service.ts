@@ -14,6 +14,7 @@ import {
   OrderListResponseData,
   OrderStatus,
   OrderTransactionStatus,
+  PayOsParams,
   PrismaTransactionObject,
   Voucher,
 } from './order.type';
@@ -28,6 +29,8 @@ import { MailService } from '../mail/mail.service';
 import { Cron } from '@nestjs/schedule';
 import { Prisma } from '@prisma/client';
 import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import PayOS from '@payos/node';
+import { CheckoutRequestType } from '@payos/node/lib/type';
 
 @Injectable()
 export class OrderService {
@@ -50,18 +53,9 @@ export class OrderService {
       },
     });
 
-    console.log(
-      'Deleted order id',
-      expireOrders.map((item) => item.id),
-    );
-
-    await this.prisma.order.deleteMany({
-      where: {
-        id: {
-          in: expireOrders.map((item) => item.id),
-        },
-      },
-    });
+    for (const order of expireOrders) {
+      await this.cancelOrder(order.id);
+    }
   }
 
   async getCartItemsData(
@@ -1226,6 +1220,12 @@ export class OrderService {
           message: 'Giao dịch không tồn tại. Vui lòng tạo hóa đơn khác',
         });
 
+      if (Date.now() > Number(order.expire)) {
+        return res.status(400).json({
+          message: 'Giao dịch đã hết hạn. Vui lòng tạo hóa đơn khác',
+        });
+      }
+
       const code = await generateCustomID('#', 'order', 'code', 6);
 
       const updateOrder = await p.order.update({
@@ -1272,6 +1272,109 @@ export class OrderService {
     });
 
     return res.status(200).json({ message: 'Tạo đơn hàng thành công.' });
+  }
+
+  async createPaymentLinkWithPayOS(dto: CheckoutOrderDto, res: Response) {
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: {
+          id: dto.orderId,
+        },
+      });
+
+      if (!order)
+        return res.status(400).json({
+          message: 'Giao dịch không tồn tại. Vui lòng tạo hóa đơn khác',
+        });
+
+      if (Date.now() > Number(order.expire)) {
+        return res.status(400).json({
+          message: 'Giao dịch đã hết hạn. Vui lòng tạo hóa đơn khác',
+        });
+      }
+
+      const payOS = new PayOS(
+        process.env.PAYOS_CLIENT_ID,
+        process.env.PAYOS_API_KEY,
+        process.env.PAYOS_CHECKSUM_KEY,
+      );
+
+      const orderCode = Date.now();
+      const code = await generateCustomID('#', 'order', 'code', 6);
+
+      await this.prisma.order.update({
+        where: {
+          id: order.id,
+        },
+        data: {
+          code: code,
+          address: dto.address,
+          province: dto.province,
+          district: dto.district,
+          ward: dto.ward,
+          email: dto.email,
+          name: dto.name,
+          paymentMethod: dto.paymentMethod,
+          note: dto.note,
+          receiverPhoneNumber: dto.receivePhoneNumber,
+          receiverName: dto.receiveName,
+          phoneNumber: dto.phoneNumber,
+          customerId: dto.customerId ? dto.customerId : undefined,
+          status: OrderStatus.PENDING_PROCESSING,
+          payOSCode: orderCode.toString(),
+        },
+      });
+
+      const checkoutRequest: CheckoutRequestType = {
+        orderCode: orderCode,
+        amount: order.totalOrderAfterDiscount,
+        description: `Thanh toan don hang`,
+        cancelUrl: `${process.env.SERVER_BASE_URL}/api/order/cancel/pay-os?order=${order.id}`,
+        returnUrl: `${process.env.SERVER_BASE_URL}/api/order/success/pay-os?order=${order.id}`,
+        buyerName: dto.name,
+        buyerEmail: dto.email,
+        buyerPhone: dto.phoneNumber,
+        buyerAddress: `${[dto.address, dto.ward, dto.district, dto.province].join(', ')}`,
+        expiredAt: Math.round(Number(order.expire) / 1000),
+      };
+
+      const response = await payOS.createPaymentLink(checkoutRequest);
+
+      return res.status(200).json({ checkoutUrl: response.checkoutUrl });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
+  async cancelPayOSPayment(query: PayOsParams, res: Response) {
+    await this.prisma.order.update({
+      where: {
+        id: query.order,
+      },
+      data: {
+        payOSCode: null,
+      },
+    });
+
+    return res.redirect(
+      `${process.env.CLIENT_BASE_URL}/checkout?order=${query.order}`,
+    );
+  }
+
+  async successPayOSPayment(query: PayOsParams, res: Response) {
+    const order = await this.prisma.order.update({
+      where: {
+        id: query.order,
+      },
+      data: {
+        transactionStatus: OrderTransactionStatus.PAID,
+      },
+    });
+
+    this.mailService.sendUserCheckoutComplete(order, order.email, order.email);
+
+    return res.redirect(`${process.env.CLIENT_BASE_URL}/checkout/success`);
   }
 
   async applyVoucher(orderId: string, voucherCode: string, res: Response) {
