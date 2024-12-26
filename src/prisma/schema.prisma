@@ -633,6 +633,7 @@ model Order {
   note                     String?
   receiverName             String?  @map("receiver_name")
   receiverPhoneNumber      String?  @map("receiver_phonenumber")
+  payOSCode                String?  @map("pay_os_code")
   createdAt                DateTime @default(now())
   expire                   BigInt   @db.UnsignedBigInt
   customerId               String?

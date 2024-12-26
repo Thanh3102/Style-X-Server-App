@@ -27,6 +27,7 @@ import { OrderPermission, QueryParams } from 'src/utils/types';
 import { Response } from 'express';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
+import { PayOsParams } from './order.type';
 
 @UseGuards(JwtGuard, PermissionsGuard)
 @UseInterceptors(LoggerInterceptor)
@@ -38,6 +39,18 @@ export class OrderController {
   @Get('/vnpay_return')
   vnpayReturn(@Req() req, @Res() res) {
     return this.orderService.VNPAY_RETURN(req, res);
+  }
+
+  @Public()
+  @Get('/cancel/pay-os')
+  cancelOrderPayOS(@Query() query: PayOsParams, @Res() res: Response) {
+    return this.orderService.cancelPayOSPayment(query, res);
+  }
+
+  @Public()
+  @Get('/success/pay-os')
+  successOrderPayOS(@Query() query: PayOsParams, @Res() res: Response) {
+    return this.orderService.successPayOSPayment(query, res);
   }
 
   @Put('/confirm/delivery')
@@ -94,6 +107,12 @@ export class OrderController {
   @Put('/')
   async checkoutOrder(@Body() dto: CheckoutOrderDto, @Req() req, @Res() res) {
     return this.orderService.checkoutOrder(dto, req, res);
+  }
+
+  @Public()
+  @Post('/payment/pay-os')
+  createPaymentLinkWithPayOS(@Body() dto: CheckoutOrderDto, @Res() res) {
+    return this.orderService.createPaymentLinkWithPayOS(dto, res);
   }
 
   @Public()
