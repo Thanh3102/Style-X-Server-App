@@ -35,11 +35,11 @@ import { PayOsParams } from './order.type';
 export class OrderController {
   constructor(private orderService: OrderService) {}
 
-  @Public()
-  @Get('/vnpay_return')
-  vnpayReturn(@Req() req, @Res() res) {
-    return this.orderService.VNPAY_RETURN(req, res);
-  }
+  // @Public()
+  // @Get('/vnpay_return')
+  // vnpayReturn(@Req() req, @Res() res) {
+  //   return this.orderService.VNPAY_RETURN(req, res);
+  // }
 
   @Public()
   @Get('/cancel/pay-os')
