@@ -14,10 +14,44 @@ import { isInteger } from 'src/utils/helper/StringHelper';
 import { QueryParams } from 'src/utils/types';
 import { ProductPublic, ProductPublicVariant } from '../product/product';
 import { CartItem, Prisma } from '@prisma/client';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class DiscountService {
   constructor(private prisma: PrismaService) {}
+
+  @Cron('0 0 0 * * *')
+  async updateExpireDiscount() {
+    try {
+      const expireDiscounts = await this.prisma.discount.findMany({
+        where: {
+          endOn: {
+            not: null,
+            lt: new Date(),
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const updateIds = expireDiscounts.map((discount) => discount.id);
+
+      await this.prisma.discount.updateMany({
+        where: {
+          id: {
+            in: updateIds,
+          },
+        },
+        data: {
+          active: false,
+        },
+      });
+      console.log('Unactive discount ids: ', updateIds.join(', '));
+    } catch (error) {
+      console.log(error);
+    }
+  }
 
   private getEntitledProduct = async (discountId: number) => {
     const discountProductIds = await this.prisma.discountProduct.findMany({

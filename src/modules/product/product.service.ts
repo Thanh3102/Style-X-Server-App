@@ -1454,10 +1454,6 @@ export class ProductService {
               (v) => !values.includes(v),
             );
 
-            console.log('addValue', addValues);
-            console.log('deleteValues', deleteValues);
-            console.log('deleteVariantIds', dto.deleteVariantIds);
-
             if (addValues.length > 0) {
               for (const addValue of addValues) {
                 await p.productPropertyValues.create({
