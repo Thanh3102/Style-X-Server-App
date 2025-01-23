@@ -44,10 +44,112 @@ export class ProductService {
     if (
       await this.prisma.product.findFirst({
         select: { id: true },
-        where: { name: dto.name, void: false },
+        where: { name: dto.name.trim(), void: false },
       })
     )
       throw new BadRequestException('Tên sản phẩm đã được sử dụng');
+
+    if (dto.variants.length > 0) {
+      for (const variant of dto.variants) {
+        if (variant.skuCode) {
+          const querySkuCode = await this.prisma.productVariants.findFirst({
+            where: {
+              skuCode: variant.skuCode.trim(),
+            },
+            select: {
+              skuCode: true,
+            },
+          });
+          if (querySkuCode)
+            throw new BadRequestException(
+              `Mã SKU ${variant.skuCode.trim()} đã được sử dụng`,
+            );
+        }
+
+        if (variant.barCode) {
+          const queryBarCode = await this.prisma.productVariants.findFirst({
+            where: {
+              barCode: variant.barCode.trim(),
+            },
+            select: {
+              barCode: true,
+            },
+          });
+          if (queryBarCode)
+            throw new BadRequestException(
+              `Mã vạch ${variant.barCode.trim()} đã được sử dụng`,
+            );
+        }
+      }
+    } else {
+      if (dto.skuCode) {
+        const querySkuCode = await this.prisma.productVariants.findFirst({
+          where: {
+            skuCode: dto.skuCode.trim(),
+          },
+          select: {
+            skuCode: true,
+          },
+        });
+        if (querySkuCode)
+          throw new BadRequestException(
+            `Mã SKU ${dto.skuCode.trim()} đã được sử dụng`,
+          );
+      }
+
+      if (dto.barCode) {
+        const queryBarCode = await this.prisma.productVariants.findFirst({
+          where: {
+            barCode: dto.barCode.trim(),
+          },
+          select: {
+            barCode: true,
+          },
+        });
+        if (queryBarCode)
+          throw new BadRequestException(
+            `Mã vạch ${dto.barCode.trim()} đã được sử dụng`,
+          );
+      }
+    }
+  };
+
+  private checkUpdateVariantConflict = async (dto: UpdateVariantDTO) => {
+    if (dto.skuCode) {
+      const querySkuCode = await this.prisma.productVariants.findFirst({
+        where: {
+          skuCode: dto.skuCode.trim(),
+          id: {
+            not: dto.variantId,
+          },
+        },
+        select: {
+          skuCode: true,
+        },
+      });
+      if (querySkuCode)
+        throw new BadRequestException(
+          `Mã SKU ${dto.skuCode.trim()} đã được sử dụng`,
+        );
+    }
+
+    if (dto.barCode) {
+      const queryBarCode = await this.prisma.productVariants.findFirst({
+        where: {
+          id: {
+            not: dto.variantId,
+          },
+          barCode: dto.barCode.trim(),
+        },
+        select: {
+          barCode: true,
+        },
+      });
+      if (queryBarCode)
+        throw new BadRequestException(
+          `Mã vạch ${dto.barCode.trim()} đã được sử dụng`,
+        );
+    }
   };
 
   private checkValidProductId = async (id: number) => {
@@ -312,17 +414,17 @@ export class ProductService {
       whereCondition.OR = [
         {
           name: {
-            contains: query,
+            contains: query.trim(),
           },
         },
         {
           skuCode: {
-            contains: query,
+            contains: query.trim(),
           },
         },
         {
           barCode: {
-            contains: query,
+            contains: query.trim(),
           },
         },
         {
@@ -330,10 +432,10 @@ export class ProductService {
             some: {
               OR: [
                 {
-                  skuCode: query,
+                  skuCode: query.trim(),
                 },
                 {
-                  barCode: query,
+                  barCode: query.trim(),
                 },
               ],
             },
@@ -570,6 +672,7 @@ export class ProductService {
           description: true,
           shortDescription: true,
           image: true,
+          vendor: true,
         },
       });
 
@@ -624,15 +727,15 @@ export class ProductService {
       await this.checkCreateProductConflict(dto);
 
       const skuCode = dto.skuCode
-        ? dto.skuCode
+        ? dto.skuCode.trim()
         : await generateCustomID('SKU', 'product', 'skuCode');
 
       const { id: createProductId } = await this.prisma.$transaction(
         async (p) => {
           const createdProduct = await p.product.create({
             data: {
-              name: dto.name,
-              barCode: dto.barCode,
+              name: dto.name.trim(),
+              barCode: dto.barCode ? dto.barCode.trim() : undefined,
               skuCode: skuCode,
               avaiable: dto.avaiable,
               comparePrice: dto.comparePrice,
@@ -640,9 +743,9 @@ export class ProductService {
               sellPrice: dto.sellPrice,
               description: dto.description,
               shortDescription: dto.shortDescription,
-              unit: dto.unit,
-              vendor: dto.vendor,
-              type: dto.type,
+              unit: dto.unit ? dto.unit.trim() : undefined,
+              vendor: dto.vendor ? dto.vendor.trim() : undefined,
+              type: dto.type ? dto.type.trim() : undefined,
               createdUserId: req.user.id,
               updatedUserId: req.user.id,
             },
@@ -855,7 +958,7 @@ export class ProductService {
     try {
       const isTitleExist = await this.prisma.category.findFirst({
         where: {
-          title: dto.title,
+          title: dto.title.trim(),
           collectionId: parseInt(dto.collectionId),
         },
       });
@@ -877,8 +980,8 @@ export class ProductService {
         async (p) => {
           const createdCategory = await p.category.create({
             data: {
-              title: dto.title,
-              slug: dto.slug,
+              title: dto.title.trim(),
+              slug: dto.slug.trim(),
               collectionId: parseInt(dto.collectionId),
             },
           });
@@ -916,15 +1019,13 @@ export class ProductService {
     try {
       const isTitleExist = await this.prisma.category.findFirst({
         where: {
-          title: dto.title,
+          title: dto.title.trim(),
           id: {
             not: parseInt(dto.id),
           },
           collectionId: parseInt(dto.collectionId),
         },
       });
-
-      console.log('ísTitle', isTitleExist);
 
       if (isTitleExist)
         return res.status(400).json({ message: 'Tiêu đề đã tồn tại' });
@@ -939,8 +1040,6 @@ export class ProductService {
         },
       });
 
-      console.log('isSlug', isSlugExist);
-
       if (isSlugExist)
         return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
 
@@ -951,8 +1050,8 @@ export class ProductService {
               id: parseInt(dto.id),
             },
             data: {
-              title: dto.title,
-              slug: dto.slug,
+              title: dto.title.trim(),
+              slug: dto.slug.trim(),
             },
           });
 
@@ -1027,7 +1126,7 @@ export class ProductService {
           },
         },
         orderBy: {
-          title: 'desc',
+          position: 'asc',
         },
       });
       return res.status(200).json(collections);
@@ -1047,7 +1146,7 @@ export class ProductService {
 
       const isTitleExist = await this.prisma.collection.findUnique({
         where: {
-          title: dto.title,
+          title: dto.title.trim(),
         },
       });
 
@@ -1056,7 +1155,7 @@ export class ProductService {
 
       const isSlugExist = await this.prisma.collection.findUnique({
         where: {
-          slug: dto.slug,
+          slug: dto.slug.trim(),
         },
       });
 
@@ -1071,8 +1170,8 @@ export class ProductService {
 
       const createdCollection = await this.prisma.collection.create({
         data: {
-          title: dto.title,
-          slug: dto.slug,
+          title: dto.title.trim(),
+          slug: dto.slug.trim(),
           position: _max.id ? _max.id + 1 : 1,
         },
       });
@@ -1115,8 +1214,8 @@ export class ProductService {
           id: parseInt(dto.id),
         },
         data: {
-          title: dto.title,
-          slug: dto.slug,
+          title: dto.title.trim(),
+          slug: dto.slug.trim(),
         },
       });
 
@@ -1302,8 +1401,6 @@ export class ProductService {
 
   async update(dto: UpdateProductDTO, req, res: Response) {
     const updateUserId = req.user.id;
-    console.log('DTO', dto);
-
     try {
       await this.prisma.$transaction(
         async (p) => {
@@ -1313,12 +1410,12 @@ export class ProductService {
               id: dto.id,
             },
             data: {
-              name: dto.name,
+              name: dto.name.trim(),
               description: dto.description,
               shortDescription: dto.shortDescription,
               avaiable: dto.avaiable,
-              type: dto.type,
-              vendor: dto.vendor,
+              type: dto.type ? dto.type.trim() : undefined,
+              vendor: dto.vendor ? dto.vendor.trim() : undefined,
               updatedUserId: updateUserId,
               sellPrice: dto.sellPrice,
               comparePrice: dto.comparePrice,
@@ -1517,6 +1614,7 @@ export class ProductService {
   }
 
   async updateVariant(dto: UpdateVariantDTO, res: Response) {
+    await this.checkUpdateVariantConflict(dto);
     try {
       await this.prisma.$transaction(
         async (p) => {
@@ -1525,12 +1623,12 @@ export class ProductService {
               id: dto.variantId,
             },
             data: {
-              barCode: dto.barCode,
-              skuCode: dto.skuCode,
+              barCode: dto.barCode ? dto.barCode.trim() : undefined,
+              skuCode: dto.skuCode.trim(),
               sellPrice: dto.sellPrice,
               comparePrice: dto.comparePrice,
               costPrice: dto.costPrice,
-              unit: dto.unit,
+              unit: dto.unit ? dto.unit.trim() : undefined,
             },
           });
         },
@@ -1554,8 +1652,11 @@ export class ProductService {
     const { query, category, slug, sort, priceRange } = params;
     let where: Prisma.ProductWhereInput = {
       avaiable: true,
+      void: false,
     };
-    let orderBy: Prisma.ProductOrderByWithRelationInput = {};
+    let orderBy: Prisma.ProductOrderByWithRelationInput = {
+      createdAt: 'desc',
+    };
 
     if (query) {
       where.name = {
@@ -1593,8 +1694,6 @@ export class ProductService {
     //     lte: maxValue,
     //   };
     // }
-
-    console.log('Where', where);
 
     return { where, orderBy };
   };

@@ -48,17 +48,17 @@ export class CustomerService {
           OR: [
             {
               code: {
-                startsWith: query,
+                startsWith: query.trim(),
               },
             },
             {
               name: {
-                startsWith: query,
+                startsWith: query.trim(),
               },
             },
             {
               email: {
-                startsWith: query,
+                startsWith: query.trim(),
               },
             },
           ],

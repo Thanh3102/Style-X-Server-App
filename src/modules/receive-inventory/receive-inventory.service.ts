@@ -56,7 +56,7 @@ export class ReceiveInventoryService {
     if (dto.code) {
       const receive = await this.prisma.receiveInventory.findFirst({
         where: {
-          code: dto.code,
+          code: dto.code.trim(),
         },
       });
       if (receive) throw new BadRequestException('Mã đơn nhập đã tồn tại');
@@ -70,7 +70,7 @@ export class ReceiveInventoryService {
             : ReceiveInventoryStatus.NOT_RECEIVED;
 
           const code = dto.code
-            ? dto.code
+            ? dto.code.trim()
             : await generateCustomID('RE', 'receiveInventory');
 
           const createdReceive = await p.receiveInventory.create({
@@ -85,9 +85,10 @@ export class ReceiveInventoryService {
               totalItemsPriceBeforeDiscount: dto.totalItemsPriceBeforeDiscount,
               transactionRemainAmount: dto.totalReceipt,
               transactionStatus: ReceiveInventoryTransaction.UN_PAID,
-              note: dto.note,
+              note: dto.note.trim(),
               supplierId: dto.supplierId,
               warehouseId: dto.warehouseId,
+              expectedAt: dto.expectedOn,
               createUserId: RequestUserId,
               code: code,
             },
@@ -417,6 +418,20 @@ export class ReceiveInventoryService {
   }
 
   async update(dto: UpdateReceiveInventoryDTO, req, res: Response) {
+    const receive = await this.prisma.receiveInventory.findFirst({
+      where: {
+        id: {
+          not: dto.receiveId,
+        },
+        code: dto.code.trim(),
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (receive) throw new BadRequestException('Mã đơn nhập đã tồn tại');
+
     try {
       await this.prisma.$transaction(async (p) => {
         // Cập nhật thông tin đơn nhập
@@ -425,9 +440,9 @@ export class ReceiveInventoryService {
             id: dto.receiveId,
           },
           data: {
-            code: dto.code,
+            code: dto.code.trim(),
             expectedAt: dto.expectedOn,
-            note: dto.note,
+            note: dto.note.trim(),
             receiveHistories: {
               create: {
                 action: ReceiveHistoryAction.UPDATE,
@@ -524,27 +539,27 @@ export class ReceiveInventoryService {
       whereCondition.OR = [
         {
           code: {
-            startsWith: query,
+            startsWith: query.trim(),
           },
         },
         {
           warehouse: {
             name: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
         },
         {
           supplier: {
             name: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
         },
         {
           createUser: {
             name: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
         },

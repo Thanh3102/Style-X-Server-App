@@ -1234,17 +1234,19 @@ export class OrderService {
         },
         data: {
           code: code,
-          address: dto.address,
+          address: dto.address.trim(),
           province: dto.province,
           district: dto.district,
           ward: dto.ward,
-          email: dto.email,
-          name: dto.name,
+          email: dto.email.trim(),
+          name: dto.name.trim(),
+          phoneNumber: dto.phoneNumber.trim(),
           paymentMethod: dto.paymentMethod,
-          note: dto.note,
-          receiverPhoneNumber: dto.receivePhoneNumber,
-          receiverName: dto.receiveName,
-          phoneNumber: dto.phoneNumber,
+          note: dto.note ? dto.note.trim() : undefined,
+          receiverPhoneNumber: dto.receivePhoneNumber
+            ? dto.receivePhoneNumber.trim()
+            : undefined,
+          receiverName: dto.receiveName ? dto.receiveName.trim() : undefined,
           customerId: dto.customerId ? dto.customerId : undefined,
           status: OrderStatus.PENDING_PROCESSING,
         },
@@ -1308,17 +1310,17 @@ export class OrderService {
         },
         data: {
           code: code,
-          address: dto.address,
+          address: dto.address.trim(),
           province: dto.province,
           district: dto.district,
           ward: dto.ward,
           email: dto.email,
           name: dto.name,
           paymentMethod: dto.paymentMethod,
-          note: dto.note,
-          receiverPhoneNumber: dto.receivePhoneNumber,
-          receiverName: dto.receiveName,
-          phoneNumber: dto.phoneNumber,
+          note: dto.note.trim(),
+          receiverPhoneNumber: dto.receivePhoneNumber.trim(),
+          receiverName: dto.receiveName.trim(),
+          phoneNumber: dto.phoneNumber.trim(),
           customerId: dto.customerId ? dto.customerId : undefined,
           status: OrderStatus.PENDING_PROCESSING,
           payOSCode: orderCode.toString(),
@@ -1331,9 +1333,9 @@ export class OrderService {
         description: `Thanh toan don hang`,
         cancelUrl: `${process.env.SERVER_BASE_URL}/api/order/cancel/pay-os?order=${order.id}`,
         returnUrl: `${process.env.SERVER_BASE_URL}/api/order/success/pay-os?order=${order.id}`,
-        buyerName: dto.name,
-        buyerEmail: dto.email,
-        buyerPhone: dto.phoneNumber,
+        buyerName: dto.name.trim(),
+        buyerEmail: dto.email.trim(),
+        buyerPhone: dto.phoneNumber.trim(),
         buyerAddress: `${[dto.address, dto.ward, dto.district, dto.province].join(', ')}`,
         expiredAt: Math.round(Number(order.expire) / 1000),
       };
@@ -1388,6 +1390,8 @@ export class OrderService {
 
           // Kiểm tra có thể sử dụng voucher
           await this.checkVoucherValid(p, orderDetail, voucher);
+
+          console.log('Voucher', voucher);
 
           if (voucher.type === 'product') {
             await this.handleApplyProductVoucher(p, orderDetail, voucher);
@@ -1735,18 +1739,17 @@ export class OrderService {
     switch (voucher.valueType) {
       case 'percent':
         discountValue = order.totalItemAfterDiscount * voucher.value * 0.01;
-        break;
-      case 'value':
-        discountValue = order.totalItemAfterDiscount * voucher.value * 0.01;
         if (
           voucher.valueLimitAmount &&
           discountValue > voucher.valueLimitAmount
         ) {
           discountValue = voucher.valueLimitAmount;
         }
-
         if (discountValue > order.totalOrderAfterDiscount)
           discountValue = order.totalOrderAfterDiscount;
+        break;
+      case 'value':
+        discountValue = voucher.value;
         break;
     }
 
@@ -1754,6 +1757,8 @@ export class OrderService {
       order.totalOrderAfterDiscount - discountValue;
     let newTotalOrderDiscountAmount =
       order.totalOrderDiscountAmount + discountValue;
+
+    console.log('discount amount', discountValue);
 
     // Update lại tổng giá trị đơn hàng
     await p.order.update({
@@ -2017,17 +2022,17 @@ export class OrderService {
       where.OR = [
         {
           name: {
-            startsWith: query,
+            startsWith: query.trim(),
           },
         },
         {
           phoneNumber: {
-            startsWith: query,
+            startsWith: query.trim(),
           },
         },
         {
           code: {
-            startsWith: query,
+            startsWith: query.trim(),
           },
         },
       ];
@@ -2282,7 +2287,7 @@ export class OrderService {
                   action: OrderHistoryAction.CANCEL,
                   type: OrderHistoryType.ADJUSTMENT,
                   changedUserId: req.user.id,
-                  reason: reason,
+                  reason: reason.trim(),
                 },
               },
             },
@@ -2492,21 +2497,21 @@ export class OrderService {
     }
   }
 
-  private sortObject(obj) {
-    let sorted = {};
-    let str = [];
-    let key;
-    for (key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        str.push(encodeURIComponent(key));
-      }
-    }
-    str.sort();
-    for (key = 0; key < str.length; key++) {
-      sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
-    }
-    return sorted;
-  }
+  // private sortObject(obj) {
+  //   let sorted = {};
+  //   let str = [];
+  //   let key;
+  //   for (key in obj) {
+  //     if (obj.hasOwnProperty(key)) {
+  //       str.push(encodeURIComponent(key));
+  //     }
+  //   }
+  //   str.sort();
+  //   for (key = 0; key < str.length; key++) {
+  //     sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, '+');
+  //   }
+  //   return sorted;
+  // }
 
   async VNPAY_RETURN(req, res: Response) {
     console.log('>>> Request query', req.query);

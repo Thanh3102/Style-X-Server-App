@@ -57,22 +57,22 @@ export class EmployeesService {
         OR: [
           {
             code: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
           {
             name: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
           {
             phoneNumber: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
           {
             email: {
-              startsWith: query,
+              startsWith: query.trim(),
             },
           },
         ],

@@ -1,6 +1,6 @@
 export class CreateReceiveInventoryDTO {
   code: string;
-  expected: Date;
+  expectedOn: Date;
   importAfterCreate: boolean;
   items: Array<{
     discountAmount: number;
