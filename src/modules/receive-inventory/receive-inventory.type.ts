@@ -27,7 +27,7 @@ export enum ReceiveHistoryAction {
 
 export type CreateReceiveInventoryDTO = {
   code: string;
-  expected: Date;
+  expectedOn: Date;
   importAfterCreate: boolean;
   items: Array<{
     discountAmount: number;

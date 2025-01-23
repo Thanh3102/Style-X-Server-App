@@ -51,6 +51,7 @@ export class CreateSupplierDTO {
   @IsString()
   assignedId: string;
 
+  @IsOptional()
   @IsArray()
   tags: string[];
 }

@@ -109,12 +109,16 @@ export class ReportService {
 
     if (reportDateMin) {
       const [day, month, year] = reportDateMin.split('/');
-      whereInput.createdAt.gte = new Date(`${year}-${month}-${day}`);
+      const minDate = new Date(`${year}-${month}-${day}`);
+      startDate = minDate;
+      whereInput.createdAt.gte = minDate;
     }
 
     if (reportDateMax) {
       const [day, month, year] = reportDateMax.split('/');
-      whereInput.createdAt.lte = new Date(`${year}-${month}-${day}`);
+      const maxDate = new Date(`${year}-${month}-${day}`);
+      endDate = maxDate;
+      whereInput.createdAt.lte = maxDate;
     }
 
     try {
@@ -304,12 +308,16 @@ export class ReportService {
 
     if (reportDateMin) {
       const [day, month, year] = reportDateMin.split('/');
-      whereInput.createdAt.gte = new Date(`${year}-${month}-${day}`);
+      const minDate = new Date(`${year}-${month}-${day}`);
+      startDate = minDate;
+      whereInput.createdAt.gte = minDate;
     }
 
     if (reportDateMax) {
       const [day, month, year] = reportDateMax.split('/');
-      whereInput.createdAt.lte = new Date(`${year}-${month}-${day}`);
+      const maxDate = new Date(`${year}-${month}-${day}`);
+      endDate = maxDate;
+      whereInput.createdAt.lte = maxDate;
     }
 
     try {
@@ -540,16 +548,16 @@ export class ReportService {
 
       if (reportDateMin) {
         const [day, month, year] = reportDateMin.split('/');
-        whereInput.orderItems.some.order.createdAt.gte = new Date(
-          `${year}-${month}-${day}`,
-        );
+        const minDate = new Date(`${year}-${month}-${day}`);
+        startDate = minDate;
+        whereInput.orderItems.some.order.createdAt.gte = minDate;
       }
 
       if (reportDateMax) {
         const [day, month, year] = reportDateMax.split('/');
-        whereInput.orderItems.some.order.createdAt.lte = new Date(
-          `${year}-${month}-${day}`,
-        );
+        const maxDate = new Date(`${year}-${month}-${day}`);
+        endDate = maxDate;
+        whereInput.orderItems.some.order.createdAt.lte = maxDate;
       }
 
       const products = await this.prisma.product.findMany({
@@ -557,29 +565,31 @@ export class ReportService {
         select: {
           id: true,
           name: true,
-          orderItems: {
-            select: {
-              totalPriceAfterDiscount: true,
-              quantity: true,
-            },
-          },
         },
+        distinct: ['id'],
       });
 
       const productSales: ReportBestSale = [];
 
       for (const product of products) {
-        let totalRevenue = 0;
-        let totalQuantity = 0;
-        for (const orderItem of product.orderItems) {
-          totalQuantity += orderItem.quantity;
-          totalRevenue += orderItem.totalPriceAfterDiscount;
-        }
+        const aggregate = await this.prisma.orderItem.aggregate({
+          where: {
+            productId: product.id,
+            order: {
+              void: false,
+              status: OrderStatus.COMPLETE,
+            },
+          },
+          _sum: {
+            totalPriceAfterDiscount: true,
+            quantity: true,
+          },
+        });
 
         productSales.push({
           productName: product.name,
-          quantity: totalQuantity,
-          revenue: totalRevenue,
+          quantity: aggregate._sum.quantity,
+          revenue: aggregate._sum.totalPriceAfterDiscount,
         });
       }
 
@@ -759,12 +769,16 @@ export class ReportService {
 
       if (reportDateMin) {
         const [day, month, year] = reportDateMin.split('/');
-        whereInput.createdAt.gte = new Date(`${year}-${month}-${day}`);
+        const minDate = new Date(`${year}-${month}-${day}`);
+        startDate = minDate;
+        whereInput.createdAt.gte = minDate;
       }
 
       if (reportDateMax) {
         const [day, month, year] = reportDateMax.split('/');
-        whereInput.createdAt.lte = new Date(`${year}-${month}-${day}`);
+        const maxDate = new Date(`${year}-${month}-${day}`);
+        endDate = maxDate;
+        whereInput.createdAt.lte = maxDate;
       }
 
       let totalNumberOfOrder = 0;
@@ -1096,19 +1110,17 @@ export class ReportService {
 
       if (reportDateMin) {
         const [day, month, year] = reportDateMin.split('/');
-        whereInput.createdAt.gte = new Date(`${year}-${month}-${day}`);
-        startDate = new Date(`${year}-${month}-${day}`);
+        const minDate = new Date(`${year}-${month}-${day}`);
+        startDate = minDate;
+        whereInput.createdAt.gte = minDate;
       }
 
       if (reportDateMax) {
         const [day, month, year] = reportDateMax.split('/');
-        whereInput.createdAt.lte = new Date(`${year}-${month}-${day}`);
-        endDate = new Date(`${year}-${month}-${day}`);
+        const maxDate = new Date(`${year}-${month}-${day}`);
+        endDate = maxDate;
+        whereInput.createdAt.lte = maxDate;
       }
-
-      console.log(reportDateMin, reportDateMax);
-
-      console.log(startDate, endDate);
 
       const response: ReportProductRevenueDetailResponse = [];
 
