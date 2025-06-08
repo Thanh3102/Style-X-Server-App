@@ -16,6 +16,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { OrderModule } from './modules/order/order.module';
 import { ReportModule } from './modules/report/report.module';
 import { CustomerModule } from './modules/customer/customer.module';
+import { GeminiModule } from './modules/gemini/gemini.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { CustomerModule } from './modules/customer/customer.module';
     OrderModule,
     ReportModule,
     CustomerModule,
+    GeminiModule,
   ],
   controllers: [],
   providers: [],

@@ -10,13 +10,14 @@ async function bootstrap() {
   // app.useGlobalFilters(new AllExceptionsFilter());
   app.enableCors({
     credentials: true,
-    origin: ['http://localhost:3001', 'http://localhost:3002'],
+    origin: [process.env.ADMIN_BASE_URL, process.env.CLIENT_BASE_URL],
     allowedHeaders: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
   });
   app.use(bodyParser.json({ limit: '50mb' }));
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
   app.setGlobalPrefix('api', { exclude: ['auth/(.*)'] });
+  app.useLogger(process.env.NODE_ENV === "development" ? ["log", "error", "warn"] : false);
   await app.listen(process.env.PORT || 3000);
 }
 bootstrap();
