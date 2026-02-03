@@ -1,5 +1,5 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { Logger, Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { ProductModule } from './modules/product/product.module';
@@ -17,6 +17,8 @@ import { OrderModule } from './modules/order/order.module';
 import { ReportModule } from './modules/report/report.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { GeminiModule } from './modules/gemini/gemini.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis, { Keyv } from '@keyv/redis';
 
 @Module({
   imports: [
@@ -24,6 +26,21 @@ import { GeminiModule } from './modules/gemini/gemini.module';
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    CacheModule.registerAsync({
+      useFactory: async () => {
+        const redisUri = `redis://${process.env.REDIS_HOST ?? 'localhost'}:${process.env.REDIS_PORT ?? 6379}`;
+        Logger.debug(`Connecting to Redis at ${redisUri}`, 'AppModule');
+        return {
+          stores: [
+            new KeyvRedis(redisUri),
+            // new Keyv({
+            //   store: new CacheableMemory({ ttl: 60000, lruSize: 5000 }),
+            // }),
+          ],
+        };
+      },
+      isGlobal: true,
+    }),
     AuthModule,
     EmployeesModule,
     ProductModule,
