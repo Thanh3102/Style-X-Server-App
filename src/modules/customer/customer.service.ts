@@ -24,7 +24,7 @@ export class CustomerService {
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
-    private jwtService: JwtService,
+    private jwtService: JwtService
   ) {}
 
   async get(queryParams: QueryParams, res: Response) {
@@ -253,7 +253,7 @@ export class CustomerService {
 
       const isCorrectPW = await comparePassword(
         dto.oldPassword,
-        customer.password,
+        customer.password
       );
 
       if (!isCorrectPW) {
@@ -283,7 +283,7 @@ export class CustomerService {
   async getOrderHistory(
     query: { status: string; page: string; limit: string },
     req,
-    res: Response,
+    res: Response
   ) {
     const { status, page: pg, limit: lim } = query;
     const page = !isNaN(Number(pg)) ? Number(pg) : 1;
@@ -400,7 +400,7 @@ export class CustomerService {
       this.mailService.sendResetPasswordLink(
         customer.email,
         customer.name,
-        resetLink,
+        resetLink
       );
 
       return res.status(200).json({
@@ -418,7 +418,7 @@ export class CustomerService {
   async resetPassword(
     requestToken: string,
     newPassword: string,
-    res: Response,
+    res: Response
   ) {
     try {
       let verifyPayload = null;
@@ -431,7 +431,7 @@ export class CustomerService {
       } catch (error) {
         console.log(error);
         throw new BadRequestException(
-          'Yêu cầu không hợp lệ. Vui lòng tạo yêu cầu mới',
+          'Yêu cầu không hợp lệ. Vui lòng tạo yêu cầu mới'
         );
       }
 
@@ -443,7 +443,7 @@ export class CustomerService {
 
       if (!findRecord || Date.now() > findRecord.expires) {
         throw new NotFoundException(
-          'Yêu cầu không tồn tại hoặc đã hết hạn. Vui lòng tạo yêu cầu mới',
+          'Yêu cầu không tồn tại hoặc đã hết hạn. Vui lòng tạo yêu cầu mới'
         );
       }
 
@@ -466,4 +466,35 @@ export class CustomerService {
         .json({ message: error.message ?? 'Đã xảy ra lỗi. Vui lòng thử lại' });
     }
   }
+
+  async verifyCustomer(email: string, password: string) {
+    const customer = await this.prisma.customer.findUnique({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Tài khoản không tồn tại');
+    }
+
+    const isCorrectPW = await comparePassword(password, customer.password);
+
+    if (!isCorrectPW) {
+      throw new BadRequestException('Mật khẩu không chính xác');
+    }
+
+    await this.prisma.customer.update({
+      where: {
+        email: email,
+      },
+      data: {
+        lastLoginAt: new Date(),
+      },
+    });
+
+    return customer
+  }
+
+  
 }

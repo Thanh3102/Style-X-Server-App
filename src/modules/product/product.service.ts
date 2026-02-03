@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -28,14 +29,17 @@ import { isInteger } from 'src/utils/helper/StringHelper';
 import { DiscountService } from '../discount/discount.service';
 import { Prisma } from '@prisma/client';
 import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Injectable()
 export class ProductService {
   constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private prisma: PrismaService,
     private cloudinary: CloudinaryService,
     private inventoriesService: InventoriesService,
-    private discountService: DiscountService,
+    private discountService: DiscountService
   ) {}
 
   private tagType = TagType.PRODUCT;
@@ -62,7 +66,7 @@ export class ProductService {
           });
           if (querySkuCode)
             throw new BadRequestException(
-              `Mã SKU ${variant.skuCode.trim()} đã được sử dụng`,
+              `Mã SKU ${variant.skuCode.trim()} đã được sử dụng`
             );
         }
 
@@ -77,7 +81,7 @@ export class ProductService {
           });
           if (queryBarCode)
             throw new BadRequestException(
-              `Mã vạch ${variant.barCode.trim()} đã được sử dụng`,
+              `Mã vạch ${variant.barCode.trim()} đã được sử dụng`
             );
         }
       }
@@ -93,7 +97,7 @@ export class ProductService {
         });
         if (querySkuCode)
           throw new BadRequestException(
-            `Mã SKU ${dto.skuCode.trim()} đã được sử dụng`,
+            `Mã SKU ${dto.skuCode.trim()} đã được sử dụng`
           );
       }
 
@@ -108,7 +112,7 @@ export class ProductService {
         });
         if (queryBarCode)
           throw new BadRequestException(
-            `Mã vạch ${dto.barCode.trim()} đã được sử dụng`,
+            `Mã vạch ${dto.barCode.trim()} đã được sử dụng`
           );
       }
     }
@@ -129,7 +133,7 @@ export class ProductService {
       });
       if (querySkuCode)
         throw new BadRequestException(
-          `Mã SKU ${dto.skuCode.trim()} đã được sử dụng`,
+          `Mã SKU ${dto.skuCode.trim()} đã được sử dụng`
         );
     }
 
@@ -147,7 +151,7 @@ export class ProductService {
       });
       if (queryBarCode)
         throw new BadRequestException(
-          `Mã vạch ${dto.barCode.trim()} đã được sử dụng`,
+          `Mã vạch ${dto.barCode.trim()} đã được sử dụng`
         );
     }
   };
@@ -329,11 +333,11 @@ export class ProductService {
       const { inventories, ...returnData } = variant;
       const avaiable = variant.inventories.reduce(
         (total, i) => total + i.avaiable,
-        0,
+        0
       );
       const discountInfo = await this.discountService.calcVariantDiscount(
         variant,
-        activeProductPromotions,
+        activeProductPromotions
       );
       tranformProductVariants.push({
         ...returnData,
@@ -448,7 +452,7 @@ export class ProductService {
       const { startDate, endDate } = tranformCreatedOnParams(
         createdOn,
         createdOnMin,
-        createdOnMax,
+        createdOnMax
       );
       if (startDate || endDate) {
         whereCondition.createdAt = {};
@@ -944,7 +948,7 @@ export class ProductService {
         {
           timeout: 30000,
           maxWait: 10000,
-        },
+        }
       );
 
       return res.status(200).json({ id: createProductId });
@@ -988,7 +992,7 @@ export class ProductService {
 
           if (dto.image) {
             const { secure_url, public_id } = await this.cloudinary.uploadFile(
-              dto.image,
+              dto.image
             );
 
             await p.category.update({
@@ -1005,7 +1009,7 @@ export class ProductService {
         {
           maxWait: 10000,
           timeout: 10000,
-        },
+        }
       );
 
       return res.status(200).json({ message: 'Tạo danh mục thành công' });
@@ -1058,7 +1062,7 @@ export class ProductService {
           if (dto.image) {
             await this.cloudinary.deleteFile(updatedCategory.imagePublicId);
             const { secure_url, public_id } = await this.cloudinary.uploadFile(
-              dto.image,
+              dto.image
             );
 
             await p.category.update({
@@ -1075,7 +1079,7 @@ export class ProductService {
         {
           maxWait: 10000,
           timeout: 10000,
-        },
+        }
       );
 
       return res.status(200).json({ message: 'Cập nhật danh mục thành công' });
@@ -1365,7 +1369,7 @@ export class ProductService {
   async addImage(
     productId: number,
     images: Array<Express.Multer.File>,
-    res: Response,
+    res: Response
   ) {
     const uploadedPublicId = [];
     try {
@@ -1384,7 +1388,7 @@ export class ProductService {
             });
           }
         },
-        { maxWait: 60000, timeout: 60000 },
+        { maxWait: 60000, timeout: 60000 }
       );
 
       return res.status(200).json({ message: 'Thêm ảnh thành công' });
@@ -1394,7 +1398,7 @@ export class ProductService {
       }
       console.log(error);
       throw new InternalServerErrorException(
-        error.message ?? 'Đã xảy ra lỗi khi thêm ảnh',
+        error.message ?? 'Đã xảy ra lỗi khi thêm ảnh'
       );
     }
   }
@@ -1497,7 +1501,7 @@ export class ProductService {
 
           // Delete product tag not use
           const deleteTags = allProductTags.filter((pTag) =>
-            dto.deleteTags.includes(pTag.name),
+            dto.deleteTags.includes(pTag.name)
           );
 
           await p.productTag.deleteMany({
@@ -1548,7 +1552,7 @@ export class ProductService {
 
             const addValues = values.filter((v) => !currentValues.includes(v));
             const deleteValues = currentValues.filter(
-              (v) => !values.includes(v),
+              (v) => !values.includes(v)
             );
 
             if (addValues.length > 0) {
@@ -1586,13 +1590,13 @@ export class ProductService {
             });
           }
         },
-        { timeout: 10000 },
+        { timeout: 10000 }
       );
       return res.status(200).json({ message: 'Cập nhật thông tin thành công' });
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
-        error.message ?? 'Đã xảy ra lỗi khi cập nhật thông tin sản phẩm',
+        error.message ?? 'Đã xảy ra lỗi khi cập nhật thông tin sản phẩm'
       );
     }
   }
@@ -1634,20 +1638,20 @@ export class ProductService {
         },
         {
           timeout: 10000,
-        },
+        }
       );
 
       return res.status(200).json({ message: 'Đã cập nhật thông tin' });
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
-        error.message ?? 'Đã xảy ra lỗi khi cập nhật phiên bản',
+        error.message ?? 'Đã xảy ra lỗi khi cập nhật phiên bản'
       );
     }
   }
 
   private tranformPublicProductParamsToQuery = async (
-    params: PublicProductParams,
+    params: PublicProductParams
   ) => {
     const { query, category, slug, sort, priceRange } = params;
     let where: Prisma.ProductWhereInput = {
@@ -1702,7 +1706,7 @@ export class ProductService {
     where: Prisma.ProductWhereInput,
     order: Prisma.ProductOrderByWithRelationInput,
     skip: number,
-    take: number,
+    take: number
   ) {
     try {
       const basicProducts = await this.prisma.product.findMany({
@@ -1743,6 +1747,19 @@ export class ProductService {
       if (isInteger(pg)) page = parseInt(pg);
       if (isInteger(lim)) limit = parseInt(lim);
 
+      console.log(`Find value of key "products-page-${page}-${limit}"`);
+
+      const cacheData: string = await this.cacheManager.get(
+        `products-page-${page}-${limit}`
+      );
+
+      if (cacheData) {
+        console.log(`Get value from key "products-page-${page}-${limit}"`);
+        return res.status(200).json(JSON.parse(cacheData));
+      }
+
+      console.log('No cache value');
+
       const skip = page === 1 ? 0 : (page - 1) * limit;
 
       const { where, orderBy } =
@@ -1752,7 +1769,7 @@ export class ProductService {
         where,
         orderBy,
         skip,
-        limit,
+        limit
       );
 
       const products = [];
@@ -1787,13 +1804,23 @@ export class ProductService {
 
       const totalPage = Math.floor(count / limit);
 
-      return res.status(200).json({
+      const responseData = {
         data: products,
         total: count,
         limit: limit,
         currentPage: page,
         lastPage: count % limit == 0 ? totalPage : totalPage + 1,
-      });
+      };
+
+      console.log(`Create key "products-page-${page}-${limit}"`);
+
+      await this.cacheManager.set(
+        `products-page-${page}-${limit}`,
+        JSON.stringify(responseData),
+        60 * 60 * 1000
+      );
+
+      return res.status(200).json(responseData);
     } catch (e) {
       console.log(e);
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
@@ -1850,7 +1877,7 @@ export class ProductService {
         },
         {},
         0,
-        24,
+        24
       );
 
       const sameCategoryProduct = [];
@@ -1926,7 +1953,7 @@ export class ProductService {
         },
         { name: 'asc' },
         undefined,
-        undefined,
+        undefined
       );
 
       const categories = await this.prisma.category.findMany({

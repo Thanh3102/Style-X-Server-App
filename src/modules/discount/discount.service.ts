@@ -15,6 +15,7 @@ import { QueryParams } from 'src/utils/types';
 import { ProductPublic, ProductPublicVariant } from '../product/product';
 import { CartItem, Prisma } from '@prisma/client';
 import { Cron } from '@nestjs/schedule';
+import { CartItemData } from '../cart/cart.type';
 
 @Injectable()
 export class DiscountService {
@@ -136,7 +137,7 @@ export class DiscountService {
     mode: string,
     title: string,
     res: Response,
-    id?: number,
+    id?: number
   ) => {
     let isTitleExist = false;
     if (id) {
@@ -464,15 +465,15 @@ export class DiscountService {
         if (dto.entitle === 'entitledCategory') {
           // Cập nhật danh mục áp dụng
           const entitledCategoryIds = await this.getEntitledCategory(
-            updateDiscount.id,
+            updateDiscount.id
           ).then((data) => data.map((item) => item.id));
 
           const addedEntitledCategoryIds = dto.entitledCategoriesIds.filter(
-            (item) => !entitledCategoryIds.includes(item),
+            (item) => !entitledCategoryIds.includes(item)
           );
 
           const deletedEntitledCategoryIds = entitledCategoryIds.filter(
-            (item) => !dto.entitledCategoriesIds.includes(item),
+            (item) => !dto.entitledCategoriesIds.includes(item)
           );
 
           if (addedEntitledCategoryIds.length > 0) {
@@ -579,15 +580,15 @@ export class DiscountService {
         if (dto.entitle === 'entitledProduct') {
           // Update entitled products
           const entitledProductIds = await this.getEntitledProduct(
-            updateDiscount.id,
+            updateDiscount.id
           ).then((data) => data.map((item) => item.id));
 
           const addedEntitledProductIds = dto.entitledProductIds.filter(
-            (item) => !entitledProductIds.includes(item),
+            (item) => !entitledProductIds.includes(item)
           );
 
           const deletedEntitledProductIds = entitledProductIds.filter(
-            (item) => !dto.entitledProductIds.includes(item),
+            (item) => !dto.entitledProductIds.includes(item)
           );
 
           if (addedEntitledProductIds.length > 0) {
@@ -612,15 +613,15 @@ export class DiscountService {
 
           // Update entitled variants
           const entitledVariantIds = await this.getEntitledVariant(
-            updateDiscount.id,
+            updateDiscount.id
           ).then((data) => data.map((item) => item.id));
 
           const addedEntitledVariantIds = dto.entitledVariantIds.filter(
-            (item) => !entitledVariantIds.includes(item),
+            (item) => !entitledVariantIds.includes(item)
           );
 
           const deletedEntitledVariantIds = entitledVariantIds.filter(
-            (item) => !dto.entitledVariantIds.includes(item),
+            (item) => !dto.entitledVariantIds.includes(item)
           );
 
           if (addedEntitledVariantIds.length > 0) {
@@ -912,7 +913,7 @@ export class DiscountService {
   async calcVariantDiscount(
     variant: { sellPrice: number; id: number },
     activeProductPromotions: ActiveDiscount[],
-    options?: { withPrerequire?: boolean },
+    options?: { withPrerequire?: boolean }
   ) {
     try {
       const { withPrerequire = false } = options ?? {};
@@ -927,7 +928,7 @@ export class DiscountService {
             if (promotion.variantIds.includes(variant.id)) return true;
           }
           return false;
-        },
+        }
       );
 
       const affectedPromotions = activeProductPromotions.filter((promotion) => {
@@ -946,22 +947,22 @@ export class DiscountService {
       let discountAmount = 0;
       // Danh sách các khuyến mại không thể kết hợp
       const notCombinePromotions = nonePrerequirePromotions.filter(
-        (item) => !item.combinesWithProductDiscount,
+        (item) => !item.combinesWithProductDiscount
       );
       // Danh sách các khuyến mại có thể kết hợp
       const combinePromotions = nonePrerequirePromotions.filter(
-        (item) => item.combinesWithProductDiscount,
+        (item) => item.combinesWithProductDiscount
       );
 
       // Lọc các khuyến mại có thể kết hợp theo loại
       const combineValuePromotions = combinePromotions.filter(
-        (item) => item.valueType === 'value',
+        (item) => item.valueType === 'value'
       );
       const combinePercentPromotions = combinePromotions.filter(
-        (item) => item.valueType === 'percent',
+        (item) => item.valueType === 'percent'
       );
       const combineFlatPromotions = combinePromotions.filter(
-        (item) => item.valueType === 'flat',
+        (item) => item.valueType === 'flat'
       );
 
       // Tìm khuyến mại sản phẩm không kết hợp có giá trị giảm lớn nhất (nếu có)
@@ -983,7 +984,7 @@ export class DiscountService {
               break;
             case 'percent':
               let percentDiscountValue = Math.round(
-                variant.sellPrice * promotion.value * 0.01,
+                variant.sellPrice * promotion.value * 0.01
               );
               if (promotion.valueLimitAmount) {
                 percentDiscountValue =
@@ -1035,7 +1036,7 @@ export class DiscountService {
             }
             return current;
           },
-          null,
+          null
         );
 
         if (minFlatPromotion && minFlatPromotion.value < priceRemain) {
@@ -1075,7 +1076,7 @@ export class DiscountService {
       if (discountAmount !== 0) {
         discountPrice = variant.sellPrice - discountAmount;
         discountPercent = Math.floor(
-          ((variant.sellPrice - discountPrice) / variant.sellPrice) * 100,
+          ((variant.sellPrice - discountPrice) / variant.sellPrice) * 100
         );
       }
 
@@ -1084,6 +1085,423 @@ export class DiscountService {
         discountPercent,
         applyPromotions,
         activePromotions: affectedPromotions,
+      };
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async calcOrderDiscount(items: any[]): Promise<any> {
+    const activePromotions = await this.getActiveDiscounts({
+      mode: ['promotion'],
+      type: ['product'],
+    });
+
+    // Tính giảm giá mỗi sản phẩm
+    const calcItemsDiscountPromise = items.map(async (item) => {
+      const {
+        applyPromotions,
+        discountAmount,
+        discountPercent,
+        discountPrice,
+      } = await this.calcItemDiscount(
+        item,
+        // totalItemBeforeDiscount,
+        activePromotions
+      );
+      return {
+        ...item,
+        applyPromotions,
+        discountPrice,
+        discountPercent,
+        discountAmount: discountAmount * item.quantity,
+        totalDiscount: discountPrice * item.quantity,
+        totalPrice: item.variant.sellPrice * item.quantity,
+      };
+    });
+
+    // Sản phẩm sau khi tính giảm giá
+    const itemsAfterDiscount = await Promise.all(calcItemsDiscountPromise);
+
+    const selectedItems = itemsAfterDiscount.filter((item) => item.selected);
+
+    // Tính tổng tiền trước giảm giá của các sản phẩm được chọn
+    const totalItemBeforeDiscount = selectedItems.reduce(
+      (total, item) => total + item.quantity * item.variant.sellPrice,
+      0
+    );
+
+    // Tính tổng tiền sau giảm giá của các sản phẩm được chọn
+    const totalItemAfterDiscount = selectedItems
+      .filter((item) => items.find((i) => i.id === item.id))
+      .reduce((total, item) => {
+        if (item.totalDiscount) {
+          return total + item.totalDiscount;
+        }
+        return total + item.totalPrice;
+      }, 0);
+    const totalItemDiscountAmount = selectedItems
+      .filter((item) => items.find((i) => i.id === item.id))
+      .reduce((total, item) => total + item.discountAmount, 0);
+
+    // Tính các khuyến mại đơn hàng
+    // Tính toán giảm giá đơn hàng
+    // Lưu lại số tiền sau mỗi giảm giá áp dụng
+    const totalOrderBeforeDiscount = totalItemAfterDiscount;
+
+    let totalOrderRemain = totalOrderBeforeDiscount;
+
+    // Các khuyến mại đơn hàng hiện tại
+    const activeOrderPromotions = await this.getActiveDiscounts({
+      mode: ['promotion'],
+      type: ['order'],
+    });
+
+    // Lọc ra các khuyến mại đơn hàng có thể áp dụng
+    const affectedOrderPromotions = activeOrderPromotions.filter(
+      (promotion) => {
+        switch (promotion.prerequisite) {
+          case 'none':
+            return true;
+          case 'prerequisiteMinTotal':
+            if (promotion.combinesWithProductDiscount)
+              return totalItemAfterDiscount >= promotion.prerequisiteMinTotal;
+
+            if (!promotion.combinesWithProductDiscount)
+              return totalItemAfterDiscount >= promotion.prerequisiteMinTotal;
+            break;
+
+          case 'prerequisiteMinItem':
+            if (items.length >= promotion.prerequisiteMinItem) return true;
+            break;
+        }
+        return false;
+      }
+    );
+
+    //Lọc ra các giảm giá đơn hàng có thể kết hợp và không kết hợp
+    const canCombineOrderPromotion = affectedOrderPromotions.filter(
+      (promo) => promo.combinesWithOrderDiscount
+    );
+
+    const canCombineValueDiscount = canCombineOrderPromotion.filter(
+      (promo) => promo.valueType === 'value'
+    );
+
+    const canCombinePercentDiscount = canCombineOrderPromotion.filter(
+      (promo) => promo.valueType === 'percent'
+    );
+
+    const cannotCombineOrderPromotion = affectedOrderPromotions.filter(
+      (promo) => !promo.combinesWithOrderDiscount
+    );
+
+    let totalOrderDiscountAmount = 0;
+    const applyOrderPromotions = [];
+
+    // Tìm giảm giá đơn hàng không kết hợp lớn nhất
+    if (cannotCombineOrderPromotion.length > 0) {
+      let maxNonCombineDiscountAmount = -1;
+      let discountValue = 0;
+      let applyPromotion = null;
+      for (const promotion of cannotCombineOrderPromotion) {
+        switch (promotion.valueType) {
+          case 'percent':
+            let percentDiscountValue = Math.round(
+              totalItemAfterDiscount * promotion.value * 0.01
+            );
+            if (promotion.valueLimitAmount) {
+              percentDiscountValue =
+                percentDiscountValue <= promotion.valueLimitAmount
+                  ? percentDiscountValue
+                  : promotion.valueLimitAmount;
+            }
+            if (percentDiscountValue > maxNonCombineDiscountAmount) {
+              (maxNonCombineDiscountAmount = percentDiscountValue),
+                (applyPromotion = promotion);
+              discountValue = percentDiscountValue;
+            }
+            break;
+          case 'value':
+            const valueDiscountValue =
+              totalItemAfterDiscount - promotion.value >= 0
+                ? totalItemAfterDiscount - promotion.value
+                : 0;
+            if (valueDiscountValue > maxNonCombineDiscountAmount) {
+              maxNonCombineDiscountAmount = valueDiscountValue;
+              applyPromotion = promotion;
+              discountValue = valueDiscountValue;
+            }
+            break;
+        }
+      }
+
+      // Tính lại giá trị còn lại để giảm giá
+      totalOrderRemain -= maxNonCombineDiscountAmount;
+      totalOrderDiscountAmount += maxNonCombineDiscountAmount;
+      // Lưu lại chương trình đã áp dụng (Nếu có)
+      if (applyPromotion)
+        applyOrderPromotions.push({
+          ...applyPromotion,
+          amount: discountValue,
+        });
+    }
+
+    if (canCombineOrderPromotion.length > 0) {
+      // Tính giá trị giảm %
+      for (const promotion of canCombinePercentDiscount) {
+        let amount = totalOrderRemain * promotion.value * 0.01;
+        if (promotion.valueLimitAmount && amount > promotion.valueLimitAmount)
+          amount = promotion.valueLimitAmount;
+        totalOrderRemain -= amount;
+        totalOrderDiscountAmount += amount;
+        applyOrderPromotions.push({ ...promotion, amount });
+      }
+
+      // Tính giá trị giảm cố định (dừng khi giảm tới âm)
+      for (const promotion of canCombineValueDiscount) {
+        if (totalOrderRemain > 0) {
+          const newtotalOrderRemain = totalOrderRemain - promotion.value;
+          const discountedAmount =
+            newtotalOrderRemain > 0 ? promotion.value : totalOrderRemain;
+          totalOrderRemain = newtotalOrderRemain >= 0 ? newtotalOrderRemain : 0;
+          totalOrderDiscountAmount += discountedAmount;
+          applyOrderPromotions.push({
+            ...promotion,
+            amount: discountedAmount,
+          });
+        }
+      }
+    }
+    // totalOrderRemain = Math.round(totalOrderRemain / 1000) * 1000;
+
+    const totalOrderAfterDiscount = totalOrderRemain;
+
+    const data = {
+      finalItems: itemsAfterDiscount,
+      applyOrderPromotions: applyOrderPromotions,
+      totalItemBeforeDiscount: totalItemBeforeDiscount,
+      totalItemAfterDiscount: totalItemAfterDiscount,
+      totalItemDiscountAmount: totalItemDiscountAmount,
+      totalOrderBeforeDiscount: totalOrderBeforeDiscount,
+      totalOrderAfterDiscount: totalOrderAfterDiscount,
+      totalOrderDiscountAmount: totalOrderDiscountAmount,
+    };
+
+    const { finalItems, ...rest } = data;
+    console.log('Data:', rest);
+
+    return data;
+  }
+
+  async calcItemDiscount(
+    item: CartItemData,
+    // totalPriceBeforeDiscount: number,
+    activeProductPromotions: ActiveDiscount[]
+  ) {
+    try {
+      // Tính giảm giá sản phẩm
+
+      // Lọc ra các chương trình áp dụng và không có điều kiện tiên quyết (prerequire)
+      // const nonePrerequirePromotions = activeProductPromotions.filter(
+      //   (promotion) => {
+      //     // Các giảm giá không yêu cầu về điều kiện
+      //     if (promotion.prerequisite === 'none') {
+      //       // Nếu áp dụng cho tất cả sản phẩm
+      //       if (promotion.entitle === 'all') return true;
+      //       if (promotion.variantIds.includes(item.variant.id)) return true;
+      //     }
+      //     return false;
+      //   },
+      // );
+
+      const totalPriceBeforeDiscount = item.variant.sellPrice * item.quantity;
+
+      const affectedPromotions = activeProductPromotions.filter((promotion) => {
+        if (promotion.entitle === 'all' && promotion.prerequisite === 'none') {
+          return true;
+        }
+
+        if (
+          promotion.entitle !== 'all' &&
+          !promotion.variantIds.includes(item.variant.id)
+        ) {
+          return false;
+        }
+        if (promotion.prerequisite !== 'none') {
+          switch (promotion.prerequisite) {
+            case 'prerequisiteMinTotal':
+              if (totalPriceBeforeDiscount < promotion.prerequisiteMinTotal)
+                return false;
+              break;
+
+            case 'prerequisiteMinItemTotal':
+              const totalItemBeforeDiscount =
+                item.variant.sellPrice * item.quantity;
+              if (totalItemBeforeDiscount < promotion.prerequisiteMinItemTotal)
+                return false;
+              break;
+
+            case 'prerequisiteMinItem':
+              if (item.quantity < promotion.prerequisiteMinItem) return false;
+              break;
+          }
+        }
+        return true;
+      });
+
+      // Các khuyến mại đã áp dụng
+      const applyPromotions: Array<
+        (typeof activeProductPromotions)[0] & { amount: number }
+      > = [];
+      // Giá còn lại để thực hiểm giảm giá
+      let priceRemain = item.variant.sellPrice;
+      // Giá trị đã giảm
+      let discountAmount = 0;
+      // Danh sách các khuyến mại không thể kết hợp
+      const notCombinePromotions = affectedPromotions.filter(
+        (item) => !item.combinesWithProductDiscount
+      );
+      // Danh sách các khuyến mại có thể kết hợp
+      const combinePromotions = affectedPromotions.filter(
+        (item) => item.combinesWithProductDiscount
+      );
+
+      // Lọc các khuyến mại có thể kết hợp theo loại
+      const combineValuePromotions = combinePromotions.filter(
+        (item) => item.valueType === 'value'
+      );
+      const combinePercentPromotions = combinePromotions.filter(
+        (item) => item.valueType === 'percent'
+      );
+      const combineFlatPromotions = combinePromotions.filter(
+        (item) => item.valueType === 'flat'
+      );
+
+      // Tìm khuyến mại sản phẩm không kết hợp có giá trị giảm lớn nhất (nếu có)
+      if (notCombinePromotions.length > 0) {
+        let maxNotCombineDiscountValue = 0;
+        let applyPromotion: (typeof activeProductPromotions)[0] | null = null;
+        for (const promotion of notCombinePromotions) {
+          switch (promotion.valueType) {
+            case 'flat':
+              const flatDiscountValue =
+                promotion.value < item.variant.sellPrice
+                  ? promotion.value
+                  : null;
+              if (
+                flatDiscountValue &&
+                flatDiscountValue > maxNotCombineDiscountValue
+              ) {
+                maxNotCombineDiscountValue = flatDiscountValue;
+                applyPromotion = promotion;
+              }
+              break;
+            case 'percent':
+              let percentDiscountValue = Math.round(
+                item.variant.sellPrice * promotion.value * 0.01
+              );
+              if (promotion.valueLimitAmount) {
+                percentDiscountValue =
+                  percentDiscountValue <= promotion.valueLimitAmount
+                    ? percentDiscountValue
+                    : promotion.valueLimitAmount;
+              }
+              if (percentDiscountValue > maxNotCombineDiscountValue) {
+                (maxNotCombineDiscountValue = percentDiscountValue),
+                  (applyPromotion = promotion);
+              }
+              break;
+            case 'value':
+              const valueDiscountValue =
+                item.variant.sellPrice - promotion.value >= 0
+                  ? item.variant.sellPrice - promotion.value
+                  : 0;
+              if (valueDiscountValue > maxNotCombineDiscountValue) {
+                maxNotCombineDiscountValue = valueDiscountValue;
+                applyPromotion = promotion;
+              }
+              break;
+          }
+        }
+        // Tính giá trị còn lại để giảm
+        priceRemain -= maxNotCombineDiscountValue;
+        discountAmount += maxNotCombineDiscountValue;
+        // Lưu lại chương trình đã áp dụng (Nếu có)
+        if (applyPromotion)
+          applyPromotions.push({
+            ...applyPromotion,
+            amount: maxNotCombineDiscountValue,
+          });
+      }
+
+      /**
+       * Quy tắc kết hợp giảm giá sản phẩm kết hợp
+       * Chọn ra đồng giá nhỏ nhất
+       * Áp dụng tuần tự các giảm giá %
+       * Áp dụng tuần tự các giảm giá cố định
+       */
+
+      if (combinePromotions.length > 0) {
+        // Tìm giảm giá đồng giá nhỏ nhất
+        const minFlatPromotion = combineFlatPromotions.reduce(
+          (min, current) => {
+            if (min) {
+              return current.value < min.value ? current : min;
+            }
+            return current;
+          },
+          null
+        );
+
+        if (minFlatPromotion && minFlatPromotion.value < priceRemain) {
+          priceRemain = minFlatPromotion.value;
+          discountAmount += minFlatPromotion.value;
+          applyPromotions.push({
+            ...minFlatPromotion,
+            amount: minFlatPromotion.value,
+          });
+        }
+
+        // Tính giá trị giảm %
+        for (const promotion of combinePercentPromotions) {
+          let amount = priceRemain * promotion.value * 0.01;
+          if (promotion.valueLimitAmount && amount > promotion.valueLimitAmount)
+            amount = promotion.valueLimitAmount;
+          priceRemain -= amount;
+          discountAmount += amount;
+          applyPromotions.push({ ...promotion, amount });
+        }
+
+        // Tính giá trị giảm cố định (dừng khi giảm tới âm)
+        for (const promotion of combineValuePromotions) {
+          if (priceRemain > 0) {
+            const newPriceRemain = priceRemain - promotion.value;
+            priceRemain = newPriceRemain >= 0 ? newPriceRemain : 0;
+            if (newPriceRemain >= 0) {
+              discountAmount += promotion.value;
+            }
+            applyPromotions.push({ ...promotion, amount: promotion.value });
+          }
+        }
+      }
+      priceRemain = Math.round(priceRemain / 1000) * 1000;
+      let discountPrice = null;
+      let discountPercent = null;
+      if (discountAmount !== 0) {
+        discountPrice = item.variant.sellPrice - discountAmount;
+        discountPercent = Math.floor(
+          ((item.variant.sellPrice - discountPrice) / item.variant.sellPrice) *
+            100
+        );
+      }
+
+      return {
+        discountPrice,
+        discountPercent,
+        discountAmount,
+        applyPromotions,
+        // activePromotions: affectedPromotions,
       };
     } catch (error) {
       console.log(error);

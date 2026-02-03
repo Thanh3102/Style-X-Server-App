@@ -57,3 +57,5 @@ export type UpdateDiscountDTO = {
 export type ActiveDiscount = Awaited<
   ReturnType<typeof DiscountService.prototype.getActiveDiscounts>
 >[number];
+
+

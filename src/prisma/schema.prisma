@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["omitApi"]
+  // previewFeatures = ["omitApi"]
 }
 
 datasource db {
@@ -205,6 +205,7 @@ model Inventory {
   productVariant ProductVariants    @relation("InventoryProductVariant", references: [id], fields: [variant_id])
 
   @@unique([variant_id, warehouse_id])
+  @@map("inventories")
 }
 
 model InventoryHistory {
@@ -532,6 +533,8 @@ model Customer {
   cart                  Cart?          @relation("Customer_Cart")
   orders                Order[]        @relation("Customer_Order")
   changedOrderHistories OrderHistory[] @relation("OrderHistoryChangeCustomer")
+  
+  @@map("customers")
 }
 
 model CustomerVerify {
@@ -559,6 +562,8 @@ model Cart {
 
   customer Customer   @relation("Customer_Cart", references: [id], fields: [customerId])
   items    CartItem[] @relation("CartItem_Cart")
+
+  @@map("carts")
 }
 
 model CartItem {
@@ -576,7 +581,7 @@ model CartItem {
   variant ProductVariants @relation("CartItem_Variant", references: [id], fields: [variantId])
 
   @@unique([cartId, productId, variantId])
-  @@map("cart_item")
+  @@map("cart_items")
 }
 
 model GuestCart {
@@ -588,7 +593,7 @@ model GuestCart {
 
   items GuestCartItem[] @relation("GuestCartItem_GuestCart")
 
-  @@map("guest_cart")
+  @@map("guest_carts")
 }
 
 model GuestCartItem {
@@ -606,7 +611,7 @@ model GuestCartItem {
   variant ProductVariants @relation("GuestCartItem_Variant", references: [id], fields: [variantId])
 
   @@unique([cartId, productId, variantId])
-  @@map("guest_cart_item")
+  @@map("guest_cart_items")
 }
 
 model Order {
@@ -646,6 +651,8 @@ model Order {
   applyVouchers      OrderApplyVoucher[]  @relation("OrderVoucher")
   inventoryHistories InventoryHistory[]   @relation("InventoryHistory_Order")
   // transactions   OrderTransaction[]   @relation("OrderTransaction")
+
+  @@map("orders")
 }
 
 model OrderApplyDiscount {
@@ -662,7 +669,7 @@ model OrderApplyDiscount {
   discount Discount @relation("OrderApply_Discount", references: [id], fields: [discountId])
   order    Order    @relation("OrderApplyDiscount", references: [id], fields: [orderId], onDelete: Cascade)
 
-  @@map("order_apply_discount")
+  @@map("order_apply_discounts")
 }
 
 model OrderItem {
@@ -684,7 +691,7 @@ model OrderItem {
   applyDiscounts OrderItemApplyDiscount[] @relation("OrderItem_ApplyDiscount")
   sources        OrderItemSource[]        @relation("OrderItemSource")
 
-  @@map("order_item")
+  @@map("order_items")
 }
 
 model OrderItemApplyDiscount {
@@ -701,7 +708,7 @@ model OrderItemApplyDiscount {
   discount  Discount  @relation("OrderItemApplyDiscount", fields: [discountId], references: [id], onDelete: Cascade)
   orderItem OrderItem @relation("OrderItem_ApplyDiscount", fields: [orderItemId], references: [id], onDelete: Cascade)
 
-  @@map("order_item_apply_discount")
+  @@map("order_item_apply_discounts")
 }
 
 model OrderItemSource {
@@ -716,7 +723,7 @@ model OrderItemSource {
   receive   ReceiveInventory? @relation("OrderReceiveSource", references: [id], fields: [receiveId])
   warehouse Warehouse         @relation("OrderWarehouseSource", references: [id], fields: [warehouseId])
 
-  @@map("order_item_source")
+  @@map("order_item_sources")
 }
 
 // model OrderTransaction {
@@ -748,7 +755,7 @@ model OrderHistory {
   order           Order     @relation("OrderHistory", references: [id], fields: [orderId], onDelete: Cascade)
   // transaction OrderTransaction?
 
-  @@map("Order_history")
+  @@map("order_history")
 }
 
 model OrderApplyVoucher {
@@ -773,6 +780,8 @@ model Role {
 
   rolePermissions RolePermission[] @relation("RolePermission_Role")
   employees       Employee[]       @relation("EmployeeRole")
+
+  @@map("roles")
 }
 
 model PermissionSection {
@@ -781,7 +790,7 @@ model PermissionSection {
 
   permissions Permission[] @relation("Permission_PermisstionSection")
 
-  @@map("permission_section")
+  @@map("permission_sections")
 }
 
 model Permission {
@@ -792,6 +801,8 @@ model Permission {
 
   section         PermissionSection @relation("Permission_PermisstionSection", references: [id], fields: [sectionId])
   rolePermissions RolePermission[]  @relation("RolePermission_Permission")
+
+  @@map("permissions")
 }
 
 model RolePermission {

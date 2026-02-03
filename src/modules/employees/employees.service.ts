@@ -102,7 +102,7 @@ export class EmployeesService {
       employees: employees,
       paginition: {
         total: Math.floor(
-          userCount % limit === 0 ? userCount / limit : userCount / limit + 1,
+          userCount % limit === 0 ? userCount / limit : userCount / limit + 1
         ),
         count: userCount,
         page: page,
@@ -163,7 +163,7 @@ export class EmployeesService {
 
     if (!isCorrectPW) {
       throw new BadRequestException('Mật khẩu không chính xác');
-    }
+    } else await this.updateLastLogin(employee.id);
 
     return employee;
   }
@@ -312,11 +312,11 @@ export class EmployeesService {
           .then((data) => data.map((item) => item.permissionId));
 
         const addPermissionIds = dto.permissionIds.filter(
-          (id) => !currentPermissionIds.includes(id),
+          (id) => !currentPermissionIds.includes(id)
         );
 
         const deletePermissionIds = currentPermissionIds.filter(
-          (id) => !dto.permissionIds.includes(id),
+          (id) => !dto.permissionIds.includes(id)
         );
 
         if (addPermissionIds.length > 0) {
@@ -360,7 +360,7 @@ export class EmployeesService {
 
       if (countEmployee > 0)
         throw new BadRequestException(
-          'Không thể xóa do có nhân viên thuộc vai trò này',
+          'Không thể xóa do có nhân viên thuộc vai trò này'
         );
 
       await this.prisma.role.update({
@@ -432,7 +432,7 @@ export class EmployeesService {
       const code = await generateCustomID('USER', 'employee');
       const dob = new Date(dto.dateOfBirth);
       const dateOfBirth = new Date(
-        Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate()),
+        Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate())
       );
 
       await this.prisma.employee.create({
@@ -464,7 +464,7 @@ export class EmployeesService {
       await this.checkUpdateDuplicateEmployee(dto);
       const dob = new Date(dto.dateOfBirth);
       const dateOfBirth = new Date(
-        Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate()),
+        Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate())
       );
 
       await this.prisma.employee.update({
@@ -532,7 +532,7 @@ export class EmployeesService {
   async changePassword(
     dto: { oldPassword: string; newPassword: string },
     req,
-    res: Response,
+    res: Response
   ) {
     const { oldPassword, newPassword } = dto;
     try {

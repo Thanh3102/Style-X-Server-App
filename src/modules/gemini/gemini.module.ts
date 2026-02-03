@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { GeminiController } from './gemini.controller';
 import { GeminiService } from './gemini.service';
-import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
+  imports: [CloudinaryModule],
   controllers: [GeminiController],
-  providers: [GeminiService, CloudinaryService],
+  providers: [GeminiService],
 })
 export class GeminiModule {}

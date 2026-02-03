@@ -32,7 +32,7 @@ export class PermissionsGuard implements CanActivate {
           role: {
             employees: {
               some: {
-                id: user.id,
+                id: parseInt(user.id),
               },
             },
           },

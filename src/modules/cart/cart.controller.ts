@@ -37,19 +37,25 @@ export class CartController {
 
   @Public()
   @Get('/guest')
-  getGuestItems(@Query('cartId') cartId: string | undefined, @Res() res) {
+  getGuestItems(
+    @Query('cartId') cartId: string | undefined,
+    @Res() res
+  ): Promise<Response> {    
     return this.cartService.getGuestItems(cartId, res);
   }
 
   @Public()
   @Post('/guest')
-  addGuestItem(@Body() dto: AddGuestItemDto, @Res() res) {
+  addGuestItem(@Body() dto: AddGuestItemDto, @Res() res): Promise<Response> {
     return this.cartService.addGuestItem(dto, res);
   }
 
   @Public()
   @Put('/guest')
-  updateGuestItemQuantity(@Body() dto: UpdateItemQuantityDto, @Res() res) {
+  updateGuestItemQuantity(
+    @Body() dto: UpdateItemQuantityDto,
+    @Res() res
+  ): Promise<Response> {
     return this.cartService.updateGuestItemQuantity(dto, res);
   }
 
@@ -57,25 +63,28 @@ export class CartController {
   @Put('/guest/select')
   updateGuestSelectedItems(
     @Body() dto: UpdateGuestSelectedItemsDto,
-    @Res() res,
-  ) {
+    @Res() res
+  ): Promise<Response> {
     return this.cartService.updateGuestSelectedItems(
       dto.cartId,
       dto.itemIds,
-      res,
+      res
     );
   }
 
   @Public()
   @Put('/guest/variant')
-  updateGuestItemVariant(@Body() dto: UpdateGuestItemVariantDto, @Res() res) {
+  updateGuestItemVariant(
+    @Body() dto: UpdateGuestItemVariantDto,
+    @Res() res
+  ): Promise<Response> {
     return this.cartService.updateGuestItemVariant(
       {
         cartId: dto.cartId,
         itemId: dto.itemId,
         newVariantId: dto.newVariantId,
       },
-      res,
+      res
     );
   }
 
@@ -83,53 +92,64 @@ export class CartController {
   updateSelectedItems(
     @Body() dto: UpdateSelectedItemsDto,
     @Req() req,
-    @Res() res,
-  ) {
+    @Res() res
+  ): Promise<Response> {
     return this.cartService.updateSelectedItems(dto.itemIds, req, res);
   }
 
   @Public()
   @Delete('/guest/:id')
-  deleteGuestItem(@Param('id') id: string, @Res() res) {
+  deleteGuestItem(@Param('id') id: string, @Res() res): Promise<Response> {
     if (!isInteger(id))
       return res.status(400).json({ message: 'Mã không hợp lệ' });
     return this.cartService.deleteGuestItem(parseInt(id), res);
   }
 
   @Get('/')
-  getItems(@Req() req, @Res() res) {
+  getItems(@Req() req, @Res() res): Promise<Response> {
     return this.cartService.getItems(req, res);
   }
 
   @Post('/')
-  addItem(@Body() dto: AddItemDto, @Req() req, @Res() res) {
+  addItem(@Body() dto: AddItemDto, @Req() req, @Res() res): Promise<Response> {
     return this.cartService.addItem(dto, req, res);
   }
 
   @Put('/')
-  updateItemQuantity(@Body() dto: UpdateItemQuantityDto, @Res() res) {
+  updateItemQuantity(
+    @Body() dto: UpdateItemQuantityDto,
+    @Res() res
+  ): Promise<Response> {
     return this.cartService.updateItemQuantity(dto, res);
   }
 
   @Put('/variant')
-  updateItemVariant(@Body() dto: UpdateItemVariantDto, @Req() req, @Res() res) {
+  updateItemVariant(
+    @Body() dto: UpdateItemVariantDto,
+    @Req() req,
+    @Res() res
+  ): Promise<Response> {
     return this.cartService.updateItemVariant(
       dto.itemId,
       dto.newVariantId,
       req,
-      res,
+      res
     );
   }
 
   @Delete('/:id')
-  deleteItem(@Param('id') id: string, @Res() res) {
+  deleteItem(@Param('id') id: string, @Res() res): Promise<Response> {
     if (!isInteger(id))
       return res.status(400).json({ message: 'Mã không hợp lệ' });
     return this.cartService.deleteItem(parseInt(id), res);
   }
 
   @Post('/sync')
-  syncCart(@Body() dto: SyncCartDto, @Req() req, @Res() res: Response) {
+  syncCart(
+    @Body() dto: SyncCartDto,
+    @Req() req,
+    @Res() res: Response
+  ): Promise<Response> {
     return this.cartService.syncCart(dto.guestCartId, req, res);
   }
 }
