@@ -19,6 +19,8 @@ export type UpdateItemQuantityDto = {
   quantity: number;
 };
 
+import { GuestCartService } from './services/guest-cart.service';
+
 export type CartItemData = Awaited<
-  ReturnType<typeof CartService.prototype.findGuestCartItems>
+  ReturnType<typeof GuestCartService.prototype.findGuestCartItems>
 >[0];
