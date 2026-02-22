@@ -1,4 +1,4 @@
-import { ProductService } from './product.service';
+import { ProductQueryService } from './services/product-query.service';
 
 export type Warehouse = {
   id: number;
@@ -134,13 +134,13 @@ export type PublicProductParams = {
 };
 
 export type ProductPublic = Awaited<
-  ReturnType<typeof ProductService.prototype.getProductPublic>
+  ReturnType<typeof ProductQueryService.prototype.getProductPublic>
 >[number];
 
 export type ProductDetailPublic = Awaited<
-  ReturnType<typeof ProductService.prototype.getProductDetailPublic>
+  ReturnType<typeof ProductQueryService.prototype.getProductDetailPublic>
 >;
 
 export type ProductPublicVariant = Awaited<
-  ReturnType<typeof ProductService.prototype.getProductPublicVariants>
+  ReturnType<typeof ProductQueryService.prototype.getProductPublicVariants>
 >[number];
