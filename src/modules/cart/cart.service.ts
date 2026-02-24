@@ -5,19 +5,15 @@ import {
   UpdateItemQuantityDto,
 } from './cart.type';
 import { Response } from 'express';
-import { GuestCartService } from './services/guest-cart.service';
-import { CustomerCartService } from './services/customer-cart.service';
+import { CartGuestService } from './services/cart-guest.service';
+import { CartCustomerService } from './services/cart-customer.service';
 
 @Injectable()
 export class CartService {
   constructor(
-    private guestCartService: GuestCartService,
-    private customerCartService: CustomerCartService
+    private guestCartService: CartGuestService,
+    private customerCartService: CartCustomerService
   ) {}
-
-  // Cron job logic moved to GuestCartService, but cron decorator should be there.
-  // We can delegate if we want to expose it, but nestjs schedule discovers based on decorators.
-  // Since GuestCartService is a provider, its cron should work automatically if registered.
 
   async syncCart(
     guestCartId: string | null,
@@ -98,24 +94,4 @@ export class CartService {
   ) {
     return this.guestCartService.updateGuestItemVariant(data, res);
   }
-
-  // Helper delegates if needed by controller or other services (though usually valid only within service)
-
-  // Explicitly exposing helper methods might not be needed if controller only calls the main methods.
-  // The controller calls:
-  // getGuestItems -> guestCartService
-  // addGuestItem -> guestCartService
-  // updateGuestItemQuantity -> guestCartService
-  // updateGuestSelectedItems -> guestCartService
-  // updateGuestItemVariant -> guestCartService
-  // deleteGuestItem -> guestCartService
-  // getItems -> customerCartService
-  // addItem -> customerCartService
-  // updateItemQuantity -> customerCartService
-  // updateItemVariant -> customerCartService
-  // deleteItem -> customerCartService
-  // syncCart -> customerCartService
-  // updateSelectedItems -> customerCartService
-
-  // So the delegation above covers all controller usage.
 }

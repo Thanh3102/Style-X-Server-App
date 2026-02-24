@@ -7,16 +7,17 @@ import { AddItemDto, CartItemData, UpdateItemQuantityDto } from '../cart.type';
 import { ActiveDiscount } from '../../discount/discount.type';
 import { Response } from 'express';
 import { Cart, CartItem } from '@prisma/client';
-import { GuestCartService } from './guest-cart.service';
+import { CartGuestService } from './cart-guest.service';
+import { PrismaTransactionObject } from 'src/prisma/prisma.types';
 
 @Injectable()
-export class CustomerCartService {
+export class CartCustomerService {
   constructor(
     private prisma: PrismaService,
     private productQueryService: ProductQueryService,
     private productInventoryService: ProductInventoryService,
     private discountService: DiscountService,
-    private guestCartService: GuestCartService
+    private guestCartService: CartGuestService
   ) {}
 
   async getItems(req, res: Response): Promise<Response> {
@@ -53,6 +54,40 @@ export class CustomerCartService {
       console.log(error);
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
+  }
+
+  async getCartItemsData(prisma: PrismaTransactionObject, ids: number[]) {
+    const items = await prisma.cartItem.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        id: true,
+        product: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        variant: {
+          select: {
+            id: true,
+            sellPrice: true,
+            costPrice: true,
+            title: true,
+            inventories: {
+              select: {
+                avaiable: true,
+              },
+            },
+          },
+        },
+        quantity: true,
+      },
+    });
+    return items;
   }
 
   async addItem(dto: AddItemDto, req, res: Response): Promise<Response> {

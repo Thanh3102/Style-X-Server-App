@@ -407,7 +407,7 @@ export class ReceiveInventoryService {
         {
           maxWait: 60000,
           timeout: 60000,
-        },
+        }
       );
 
       return res.json({ id, message: 'Tạo đơn nhập hàng thành công' });
@@ -497,7 +497,7 @@ export class ReceiveInventoryService {
 
         // Xóa tag không sử dụng cửa đơn nhập
         const deleteTags = allReceiveTags.filter((rTag) =>
-          dto.deleteTags.includes(rTag.name),
+          dto.deleteTags.includes(rTag.name)
         );
 
         await p.receiveInventoryTag.deleteMany({
@@ -578,7 +578,7 @@ export class ReceiveInventoryService {
       const { startDate, endDate } = tranformCreatedOnParams(
         createdOn,
         createdOnMin,
-        createdOnMax,
+        createdOnMax
       );
       if (startDate || endDate) {
         whereCondition.createdAt = {};
@@ -862,7 +862,7 @@ export class ReceiveInventoryService {
         {
           maxWait: 10000,
           timeout: 10000,
-        },
+        }
       );
       return res.json({ message: 'Đã cập nhật tồn kho ' });
     } catch (error) {
@@ -922,7 +922,7 @@ export class ReceiveInventoryService {
         {
           maxWait: 10000,
           timeout: 10000,
-        },
+        }
       );
       return res.json({ message: 'Cập nhật đơn nhập thành công' });
     } catch (error) {
@@ -1031,7 +1031,7 @@ export class ReceiveInventoryService {
         {
           maxWait: 10000,
           timeout: 10000,
-        },
+        }
       );
 
       return res.json({ message: 'Đã hủy đơn nhập' });

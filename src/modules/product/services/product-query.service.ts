@@ -882,4 +882,26 @@ export class ProductQueryService {
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
   }
+
+  async findVariantIdByCategoryId(categoryIds: number[]) {
+    const variantIds = await this.prisma.productVariants.findMany({
+      where: {
+        product: {
+          productCategories: {
+            some: {
+              categoryId: {
+                in: categoryIds,
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    const formatData = variantIds.map((item) => item.id);
+    return formatData;
+  }
 }

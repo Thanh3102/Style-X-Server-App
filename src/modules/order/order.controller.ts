@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
-import { OrderService } from './order.service';
 import {
   ApplyVoucherDto,
   CancelOrderDto,
@@ -28,97 +27,102 @@ import { Response } from 'express';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
 import { PayOsParams } from './order.type';
+import { OrderQueryService } from './services/order-query.service';
+import { OrderPaymentService } from './services/order-payment.service';
+import { OrderCommandService } from './services/order-command.service';
 
 @UseGuards(JwtGuard, PermissionsGuard)
 @UseInterceptors(LoggerInterceptor)
 @Controller('order')
 export class OrderController {
-  constructor(private orderService: OrderService) {}
-
-  // @Public()
-  // @Get('/vnpay_return')
-  // vnpayReturn(@Req() req, @Res() res) {
-  //   return this.orderService.VNPAY_RETURN(req, res);
-  // }
+  constructor(
+    private orderQueryService: OrderQueryService,
+    private orderPaymentService: OrderPaymentService,
+    private orderCommandService: OrderCommandService
+  ) {}
 
   @Public()
   @Get('/cancel/pay-os')
   cancelOrderPayOS(@Query() query: PayOsParams, @Res() res: Response) {
-    return this.orderService.cancelPayOSPayment(query, res);
+    return this.orderPaymentService.cancelPayOSPayment(query, res);
   }
 
   @Public()
   @Get('/success/pay-os')
   successOrderPayOS(@Query() query: PayOsParams, @Res() res: Response) {
-    return this.orderService.successPayOSPayment(query, res);
+    return this.orderPaymentService.successPayOSPayment(query, res);
   }
 
   @Put('/confirm/delivery')
   @Permissions(OrderPermission.StatusUpdate)
   confirmDelivery(@Body() dto: ConfirmDeliveryDto, @Req() req, @Res() res) {
-    return this.orderService.confirmDelivery(
+    return this.orderCommandService.confirmDelivery(
       dto.orderId,
       dto.isSendEmail,
       req,
-      res,
+      res
     );
   }
 
   @Put('/cancel')
   @Permissions(OrderPermission.Cancel)
   cancelOrderByAdmin(@Body() dto: CancelOrderDto, @Req() req, @Res() res) {
-    return this.orderService.cancelOrderByAdmin(dto, req, res);
+    return this.orderPaymentService.cancelOrderByAdmin(dto, req, res);
   }
 
   @Put('/confirm/payment')
   @Permissions(OrderPermission.StatusUpdate)
   confirmPaymentReceived(@Body() dto: CancelOrderDto, @Req() req, @Res() res) {
-    return this.orderService.confirmPaymentReceived(dto, req, res);
+    return this.orderPaymentService.confirmPaymentReceived(dto, req, res);
   }
 
   @Get('/')
   @Permissions(OrderPermission.Access)
   getOrderList(@Query() query: QueryParams, @Res() res: Response) {
-    return this.orderService.requestOrderList(query, res);
+    return this.orderQueryService.requestOrderList(query, res);
   }
 
   @Get('/admin/:orderId')
   @Permissions(OrderPermission.Access)
   getOrderDetail(@Param('orderId') orderId, @Res() res: Response) {
-    return this.orderService.requestOrderDetail(orderId, res);
+    return this.orderCommandService.requestOrderDetail(orderId, res);
   }
 
   @Delete('/admin/:orderId')
   @Permissions(OrderPermission.Delete)
   deleteOrder(@Param('orderId') orderId, @Req() req, @Res() res: Response) {
-    return this.orderService.deleteOrder(orderId, req, res);
+    return this.orderCommandService.deleteOrder(orderId, req, res);
   }
 
   @Post('/')
   async createTempOrder(
     @Body() dto: CreateTempOrderDto,
     @Req() req,
-    @Res() res,
+    @Res() res
   ) {
-    return this.orderService.createTempOrder(dto, req, res);
+    return this.orderPaymentService.createTempOrder(dto, req, res);
   }
 
   @Public()
   @Put('/')
-  async checkoutOrder(@Body() dto: CheckoutOrderDto, @Req() req, @Res() res) {
-    return this.orderService.checkoutOrder(dto, req, res);
+  async checkoutOrder(@Body() dto: CheckoutOrderDto, @Res() res) {
+    return this.orderPaymentService.checkoutOrder(dto, res);
   }
 
   @Public()
   @Post('/payment/pay-os')
   createPaymentLinkWithPayOS(@Body() dto: CheckoutOrderDto, @Res() res) {
-    return this.orderService.createPaymentLinkWithPayOS(dto, res);
+    return this.orderPaymentService.createPaymentLinkWithPayOS(dto, res);
   }
 
   @Public()
   @Post('/voucher')
   async applyVoucher(@Body() dto: ApplyVoucherDto, @Res() res) {
-    return this.orderService.applyVoucher(dto.orderId, dto.voucherCode, res);
+    return this.orderCommandService.applyVoucher(
+      dto.orderId,
+      dto.voucherCode,
+      res
+    );
   }
 
   @Public()
@@ -126,20 +130,34 @@ export class OrderController {
   async createGuestTempOrder(
     @Body() dto: CreateTempOrderDto,
     @Req() req,
-    @Res() res,
+    @Res() res
   ) {
-    return this.orderService.createTempOrder(dto, req, res);
+    return this.orderPaymentService.createTempOrder(dto, req, res);
   }
 
   @Public()
   @Get('/:orderId')
   async getOrderInfomation(@Param('orderId') orderId: string, @Res() res) {
-    return this.orderService.fetchOrder(orderId, res);
+    const order = await this.orderQueryService.getOrder(orderId);
+
+    if (!order)
+      return res.status(404).json({
+        message:
+          'Hóa đơn không tồn tại hoặc đã hết thời gian giao dịch. Vui lòng tạo hóa đơn mới',
+      });
+
+    if (Date.now() > order.expire) {
+      return res.status(400).json({
+        message: 'Phiên giao dịch đã hết hạn. Vui lòng tạo hóa đơn mới',
+      });
+    }
+
+    return res.status(200).json({ ...order, expire: Number(order.expire) });
   }
 
   @Public()
   @Delete('/:orderId')
   async cancelOrder(@Param('orderId') orderId: string, @Res() res) {
-    return this.orderService.requestCancelOrder(orderId, res);
+    return this.orderPaymentService.requestCancelOrder(orderId, res);
   }
 }

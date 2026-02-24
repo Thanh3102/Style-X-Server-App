@@ -58,4 +58,8 @@ export type ActiveDiscount = Awaited<
   ReturnType<typeof DiscountService.prototype.getActiveDiscounts>
 >[number];
 
+export type Voucher = Awaited<
+  ReturnType<typeof DiscountService.prototype.findVoucher>
+>;
+
 

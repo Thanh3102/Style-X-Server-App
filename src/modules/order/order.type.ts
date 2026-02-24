@@ -1,7 +1,7 @@
-import { Prisma, PrismaClient } from '@prisma/client';
-import { DefaultArgs } from '@prisma/client/runtime/library';
-import { OrderService } from './order.service';
 import { PaginitionData } from 'src/utils/types';
+import { CartCustomerService } from '../cart/services/cart-customer.service';
+import { CartGuestService } from '../cart/services/cart-guest.service';
+import { OrderQueryService } from './services/order-query.service';
 
 export enum OrderStatus {
   CANCEL = 'Đã hủy',
@@ -52,21 +52,18 @@ export type CheckoutOrderDto = {
   customerId?: string;
 };
 
-export type CartItem = Awaited<
-  ReturnType<typeof OrderService.prototype.getCartItemsData>
+export type CustomerCartItem = Awaited<
+  ReturnType<typeof CartCustomerService.prototype.getCartItemsData>
 >[0];
 
-export type PrismaTransactionObject = Omit<
-  PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
+export type GuestCartItem = Awaited<
+  ReturnType<typeof CartGuestService.prototype.getCartItemsData>
+>[0];
 
-export type Voucher = Awaited<
-  ReturnType<typeof OrderService.prototype.findVoucher>
->;
+export type CartItem = CustomerCartItem | GuestCartItem;
 
 export type OrderDetail = Awaited<
-  ReturnType<typeof OrderService.prototype.getOrderDetail>
+  ReturnType<typeof OrderQueryService.prototype.getOrderDetail>
 >;
 
 export type OrderListCustomer = {
@@ -197,5 +194,3 @@ export type PayOsParams = {
   cancel: boolean;
   order: string;
 };
-
-

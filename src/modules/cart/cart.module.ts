@@ -8,8 +8,8 @@ import { ProductInventoryService } from '../product/services/product-inventory.s
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { InventoriesModule } from '../inventories/inventories.module';
 import { DiscountModule } from '../discount/discount.module';
-import { GuestCartService } from './services/guest-cart.service';
-import { CustomerCartService } from './services/customer-cart.service';
+import { CartGuestService } from './services/cart-guest.service';
+import { CartCustomerService } from './services/cart-customer.service';
 
 @Module({
   imports: [ProductModule, CloudinaryModule, InventoriesModule, DiscountModule],
@@ -17,11 +17,11 @@ import { CustomerCartService } from './services/customer-cart.service';
   providers: [
     CartService,
     PrismaService,
-    GuestCartService,
-    CustomerCartService,
+    CartGuestService,
+    CartCustomerService,
     ProductQueryService,
     ProductInventoryService,
   ],
-  exports: [CartService, GuestCartService, CustomerCartService],
+  exports: [CartService, CartGuestService, CartCustomerService],
 })
 export class CartModule {}
