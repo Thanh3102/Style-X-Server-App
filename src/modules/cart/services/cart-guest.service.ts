@@ -6,48 +6,16 @@ import { DiscountService } from '../../discount/discount.service';
 import { AddGuestItemDto, UpdateItemQuantityDto } from '../cart.dto';
 import { GuestCart, GuestCartItem } from '@prisma/client';
 import { Response } from 'express';
-import { Cron } from '@nestjs/schedule';
+import { PrismaTransactionObject } from 'src/prisma/prisma.types';
 
 @Injectable()
-export class GuestCartService {
+export class CartGuestService {
   constructor(
     private prisma: PrismaService,
     private productQueryService: ProductQueryService,
     private productInventoryService: ProductInventoryService,
     private discountService: DiscountService
   ) {}
-
-  @Cron('0 0 0 * * *', {
-    name: 'deleteExpireGuestCart',
-    timeZone: 'Asia/Ho_Chi_Minh',
-  })
-  async deleteExpireGuestCart(): Promise<void> {
-    await this.prisma.$transaction(
-      async (p) => {
-        await p.guestCartItem.deleteMany({
-          where: {
-            cart: {
-              expires: {
-                lt: new Date(),
-              },
-            },
-          },
-        });
-
-        await p.guestCart.deleteMany({
-          where: {
-            expires: {
-              lt: new Date(),
-            },
-          },
-        });
-      },
-      {
-        maxWait: 30000,
-        timeout: 30000,
-      }
-    );
-  }
 
   async getGuestItems(cartId: string | null, res: Response) {
     try {
@@ -102,6 +70,40 @@ export class GuestCartService {
 
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
+  }
+
+  async getCartItemsData(prisma: PrismaTransactionObject, ids: number[]) {
+    const items = await prisma.guestCartItem.findMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+      select: {
+        id: true,
+        product: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        variant: {
+          select: {
+            id: true,
+            costPrice: true,
+            sellPrice: true,
+            title: true,
+            inventories: {
+              select: {
+                avaiable: true,
+              },
+            },
+          },
+        },
+        quantity: true,
+      },
+    });
+    return items;
   }
 
   async addGuestItem(dto: AddGuestItemDto, res: Response): Promise<Response> {

@@ -12,8 +12,7 @@ import {
 import { Response } from 'express';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { QueryParams } from 'src/utils/types';
-import { ProductPublic, ProductPublicVariant } from '../product/product';
-import { CartItem, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { Cron } from '@nestjs/schedule';
 import { CartItemData } from '../cart/cart.type';
 
@@ -1506,5 +1505,33 @@ export class DiscountService {
     } catch (error) {
       console.log(error);
     }
+  }
+
+  async findVoucher(title: string) {
+    const voucher = await this.prisma.discount.findFirst({
+      where: {
+        title: title,
+        mode: 'coupon',
+      },
+      include: {
+        entitleCategories: true,
+        entitleProducts: true,
+        entitleVariants: true,
+      },
+    });
+
+    if (!voucher) return null;
+
+    const formatData = {
+      ...voucher,
+      entitleCategories: voucher.entitleCategories.map(
+        (item) => item.categoryId
+      ),
+
+      entitleProducts: voucher.entitleProducts.map((item) => item.productId),
+      entitleVariants: voucher.entitleVariants.map((item) => item.variantId),
+    };
+
+    return formatData;
   }
 }
