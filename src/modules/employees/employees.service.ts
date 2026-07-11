@@ -16,6 +16,7 @@ import {
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { Prisma } from '@prisma/client';
 import { isInteger } from 'src/utils/helper/StringHelper';
+import { parse } from 'path';
 
 @Injectable()
 export class EmployeesService {
@@ -446,7 +447,7 @@ export class EmployeesService {
           gender: dto.gender === 1 ? true : false,
           phoneNumber: dto.phoneNumber,
           roleId: dto.roleId,
-          createdEmployeeId: req.user.id,
+          createdEmployeeId: parseInt(req.user.id),
         },
       });
 
@@ -516,7 +517,7 @@ export class EmployeesService {
       const id = req.user.id;
       const employee = await this.prisma.employee.findUnique({
         where: {
-          id: id,
+          id: parseInt(id),
         },
         select: this.employeeBasicInfoSelect,
       });
@@ -568,7 +569,7 @@ export class EmployeesService {
     try {
       const employee = await this.prisma.employee.findUnique({
         where: {
-          id: req.user.id,
+          id: parseInt(req.user.id),
         },
         select: {
           role: {

@@ -26,7 +26,7 @@ export class CustomerAuthService {
     );
 
     const payload: JWTPayload = {
-      id: String(customer.id),
+      id: customer.id,
       email: customer.email,
     };
 
@@ -34,7 +34,7 @@ export class CustomerAuthService {
 
     return {
       user: {
-        id: String(customer.id),
+        id: customer.id,
         name: customer.name,
         email: customer.email,
       },
