@@ -16,7 +16,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { OrderModule } from './modules/order/order.module';
 import { ReportModule } from './modules/report/report.module';
 import { CustomerModule } from './modules/customer/customer.module';
-import { GeminiModule } from './modules/gemini/gemini.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis, { Keyv } from '@keyv/redis';
 
@@ -56,7 +55,6 @@ import KeyvRedis, { Keyv } from '@keyv/redis';
     OrderModule,
     ReportModule,
     CustomerModule,
-    GeminiModule,
   ],
   controllers: [],
   providers: [],

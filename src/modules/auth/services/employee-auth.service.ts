@@ -19,7 +19,7 @@ export class EmployeeAuthService {
     );
 
     const payload: JWTPayload = {
-      id: String(employee.id),
+      id: employee.id,
       username: employee.username,
       email: employee.email,
     };

@@ -38,9 +38,11 @@ export class AuthController {
   async signIn(@Body() dto: EmployeeSignInDTO): Promise<EmployeeSignInResponseDTO> {
     try {
       return await this.authService.employeeSignIn(dto);
-    } catch (error) {
-      this.logger.error(`employeeSignIn failed: ${error?.message}`, error?.stack);
-      throw new InternalServerErrorException(error?.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`employeeSignIn failed: ${message}`, stack);
+      throw new InternalServerErrorException(message);
     }
   }
 
@@ -56,9 +58,11 @@ export class AuthController {
   async customerSignIn(@Body() dto: CustomerSignInDTO): Promise<CustomerSignInResponseDTO> {
     try {
       return await this.authService.customerSignIn(dto);
-    } catch (error) {
-      this.logger.error(`customerSignIn failed: ${error?.message}`, error?.stack);
-      throw new InternalServerErrorException(error?.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`customerSignIn failed: ${message}`, stack);
+      throw new InternalServerErrorException(message);
     }
   }
 
@@ -74,12 +78,14 @@ export class AuthController {
       }
 
       return { message: 'Mã xác thực gửi tới email của bạn' };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      this.logger.error(`customerSignUp failed: ${error?.message}`, error?.stack);
-      throw new InternalServerErrorException(error?.message ?? 'Đã xảy ra lỗi');
+      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`customerSignUp failed: ${message}`, stack);
+      throw new InternalServerErrorException(message);
     }
   }
 
@@ -98,12 +104,14 @@ export class AuthController {
       }
 
       return { message: result.message };
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) {
         throw error;
       }
-      this.logger.error(`verifySignUpOtp failed: ${error?.message}`, error?.stack);
-      throw new InternalServerErrorException(error?.message ?? 'Đã xảy ra lỗi');
+      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`verifySignUpOtp failed: ${message}`, stack);
+      throw new InternalServerErrorException(message);
     }
   }
 }
