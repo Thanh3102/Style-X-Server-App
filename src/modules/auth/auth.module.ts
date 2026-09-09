@@ -16,17 +16,9 @@ import { TokenService } from './services/token.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       global: true,
-      useFactory: async (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET_KEY');
-        if (!secret) {
-          throw new Error(
-            'JWT_SECRET_KEY is not defined in environment variables'
-          );
-        }
-        return {
-          secret,
-        };
-      },
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_SECRET_KEY'),
+      }),
       inject: [ConfigService],
     }),
     EmployeesModule,

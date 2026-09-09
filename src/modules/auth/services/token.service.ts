@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import {
   JWTPayload,
   AccessTokenVerifyPayload,
@@ -9,19 +10,26 @@ import {
 
 @Injectable()
 export class TokenService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService
+  ) {}
 
   async generateTokenPair(
     payload: JWTPayload,
     isRemember: boolean = false
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: process.env.JWT_ACCESS_TOKEN_EXPIRED_TIME,
+      expiresIn: this.configService.get<string>(
+        'JWT_ACCESS_TOKEN_EXPIRED_TIME'
+      ),
     });
 
     const refreshTokenExpireTime = isRemember
-      ? process.env.JWT_REFRESH_TOKEN_EXPIRED_TIME_REMEMBER
-      : process.env.JWT_REFRESH_TOKEN_EXPIRED_TIME;
+      ? this.configService.get<string>(
+          'JWT_REFRESH_TOKEN_EXPIRED_TIME_REMEMBER'
+        )
+      : this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRED_TIME');
 
     const refreshToken = await this.jwtService.signAsync(
       { type: 'refresh', ...payload },
@@ -36,7 +44,12 @@ export class TokenService {
   getExpiredIn(): number {
     return (
       new Date().getTime() +
-      parseInt(process.env.JWT_ACCESS_TOKEN_EXPIRED_TIME_NUMBER || '0', 10)
+      parseInt(
+        this.configService.get<string>(
+          'JWT_ACCESS_TOKEN_EXPIRED_TIME_NUMBER'
+        ) ?? '0',
+        10
+      )
     );
   }
 
