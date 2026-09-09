@@ -1,4 +1,4 @@
-import { PaginitionData } from 'src/utils/types';
+import { PaginationData } from 'src/utils/types';
 
 export type GetCustomerResponse = {
   customers: {
@@ -10,7 +10,7 @@ export type GetCustomerResponse = {
     numberOfOrder: number;
     totalOrderRevenue: number;
   }[];
-  paginition: PaginitionData;
+  paginition: PaginationData;
 };
 
 export type CustomerDetail = {
@@ -72,5 +72,5 @@ export type OrderHistory = {
       };
     }>;
   }>;
-  paginition: PaginitionData;
+  paginition: PaginationData;
 };

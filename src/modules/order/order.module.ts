@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { OrderController } from './order.controller';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ProductModule } from '../product/product.module';
 import { DiscountModule } from '../discount/discount.module';
 import { CartModule } from '../cart/cart.module';
@@ -25,7 +24,6 @@ import { OrderQueryService } from './services/order-query.service';
   ],
   controllers: [OrderController],
   providers: [
-    PrismaService,
     OrderCalculationService,
     OrderCommandService,
     OrderCronService,

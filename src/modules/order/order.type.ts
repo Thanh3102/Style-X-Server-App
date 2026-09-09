@@ -1,4 +1,4 @@
-import { PaginitionData } from 'src/utils/types';
+import { PaginationData } from 'src/utils/types';
 import { CartCustomerService } from '../cart/services/cart-customer.service';
 import { CartGuestService } from '../cart/services/cart-guest.service';
 import { OrderQueryService } from './services/order-query.service';
@@ -179,7 +179,7 @@ export type FormatOrderDetail = {
 
 export type OrderListResponseData = {
   data: FormatOrder[];
-  paginition: PaginitionData;
+  paginition: PaginationData;
 };
 
 export type ConfirmPaymentReceivedDto = {

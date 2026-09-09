@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrderQueryService } from '../services/order-query.service';
 import { DiscountService } from 'src/modules/discount/discount.service';
-import { PrismaTransactionObject } from 'src/prisma/prisma.types';
+import { PrismaTransactionClient } from 'src/prisma/prisma.types';
 import {
   FormatOrderDetail,
   OrderDetail,
@@ -31,7 +31,7 @@ export class OrderCommandService {
   ) {}
 
   async checkVoucherCondition(
-    p: PrismaTransactionObject,
+    p: PrismaTransactionClient,
     order: OrderDetail,
     voucher: Voucher
   ) {
@@ -142,7 +142,7 @@ export class OrderCommandService {
   }
 
   async handleApplyProductVoucher(
-    p: PrismaTransactionObject,
+    p: PrismaTransactionClient,
     order: OrderDetail,
     voucher: Voucher
   ) {
@@ -427,7 +427,7 @@ export class OrderCommandService {
   }
 
   async handleApplyOrderVoucher(
-    p: PrismaTransactionObject,
+    p: PrismaTransactionClient,
     order: OrderDetail,
     voucher: Voucher
   ) {

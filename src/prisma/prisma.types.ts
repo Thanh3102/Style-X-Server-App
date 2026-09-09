@@ -1,7 +1,10 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import { DefaultArgs } from '@prisma/client/runtime/library';
 
-export type PrismaTransactionObject = Omit<
+export type PrismaTransactionClient = Omit<
   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
 >;
+
+/** @deprecated Use PrismaTransactionClient. */
+export type PrismaTransactionObject = PrismaTransactionClient;

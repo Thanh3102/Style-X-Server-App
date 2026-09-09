@@ -8,7 +8,7 @@ import { ActiveDiscount } from '../../discount/discount.type';
 import { Response } from 'express';
 import { Cart, CartItem } from '@prisma/client';
 import { CartGuestService } from './cart-guest.service';
-import { PrismaTransactionObject } from 'src/prisma/prisma.types';
+import { PrismaTransactionClient } from 'src/prisma/prisma.types';
 
 @Injectable()
 export class CartCustomerService {
@@ -56,7 +56,7 @@ export class CartCustomerService {
     }
   }
 
-  async getCartItemsData(prisma: PrismaTransactionObject, ids: number[]) {
+  async getCartItemsData(prisma: PrismaTransactionClient, ids: number[]) {
     const items = await prisma.cartItem.findMany({
       where: {
         id: {

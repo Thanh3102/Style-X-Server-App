@@ -224,7 +224,7 @@ export const convertParamsToCondition = (createdOn: string) => {
   }
 };
 
-export const tranformCreatedOnParams = (
+export const transformCreatedOnParams = (
   createdOn?: string,
   createdOnMin?: string,
   createdOnMax?: string
@@ -311,3 +311,6 @@ export const tranformCreatedOnParams = (
 
   return { startDate, endDate };
 };
+
+/** @deprecated Use transformCreatedOnParams. */
+export const tranformCreatedOnParams = transformCreatedOnParams;

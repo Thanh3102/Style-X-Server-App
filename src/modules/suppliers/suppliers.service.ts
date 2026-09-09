@@ -18,7 +18,7 @@ import { TagsService } from '../tags/tags.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { EmployeesService } from '../employees/employees.service';
 import { QueryParams } from 'src/utils/types';
-import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { Prisma } from '@prisma/client';
 
@@ -325,7 +325,7 @@ export class SuppliersService {
     }
 
     if (createdOn || createdOnMin || createdOnMax) {
-      const { startDate, endDate } = tranformCreatedOnParams(
+      const { startDate, endDate } = transformCreatedOnParams(
         createdOn,
         createdOnMin,
         createdOnMax

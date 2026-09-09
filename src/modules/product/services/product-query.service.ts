@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { Cache } from 'cache-manager';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { QueryParams } from 'src/utils/types';
 import { DiscountService } from '../../discount/discount.service';
@@ -269,7 +269,7 @@ export class ProductQueryService {
     }
 
     if (createdOn || createdOnMin || createdOnMax) {
-      const { startDate, endDate } = tranformCreatedOnParams(
+      const { startDate, endDate } = transformCreatedOnParams(
         createdOn,
         createdOnMin,
         createdOnMax

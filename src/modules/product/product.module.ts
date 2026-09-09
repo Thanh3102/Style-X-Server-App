@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ProductController } from './product.controller';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { InventoriesModule } from '../inventories/inventories.module';
 import { DiscountModule } from '../discount/discount.module';
@@ -15,7 +14,6 @@ import { CollectionService } from './services/collection.service';
   imports: [CloudinaryModule, InventoriesModule, DiscountModule],
   controllers: [ProductController],
   providers: [
-    PrismaService,
     ProductQueryService,
     ProductCommandService,
     ProductInventoryService,

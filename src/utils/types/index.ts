@@ -62,12 +62,17 @@ export enum InventoryTransactionAction {
   DELIVERY_COMPLETE = 'Hoàn thành giao hàng',
 }
 
-export type PaginitionData = {
+export type PaginationData = {
   total: number;
   count: number;
   page: number;
   limit: number;
 };
+
+/** @deprecated Use PaginationData. */
+export type PaginitionData = PaginationData;
+
+export type { AuthenticatedRequest, RequestActor } from './request.types';
 
 export enum DashboardPermission {
   Access = 'dashboard_access',

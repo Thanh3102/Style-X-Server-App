@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { MailModule } from '../mail/mail.module';
 import { EmployeesModule } from '../employees/employees.module';
 import { CustomerModule } from '../customer/customer.module';
@@ -40,7 +39,6 @@ import { TokenService } from './services/token.service';
     CustomerAuthService,
     EmployeeAuthService,
     TokenService,
-    PrismaService,
   ],
   exports: [AuthService],
 })

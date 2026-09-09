@@ -18,12 +18,14 @@ import { ReportModule } from './modules/report/report.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import KeyvRedis from '@keyv/redis';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    PrismaModule,
     ScheduleModule.forRoot(),
     CacheModule.registerAsync({
       useFactory: async () => {

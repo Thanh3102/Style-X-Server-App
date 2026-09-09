@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
 import { QueryParams } from 'src/utils/types';
 import { FormatOrder, OrderListResponseData } from '../order.type';
 import { Response } from 'express';
@@ -92,7 +92,7 @@ export class OrderQueryService {
     }
 
     if (createdOn || createdOnMin || createdOnMax) {
-      const { startDate, endDate } = tranformCreatedOnParams(
+      const { startDate, endDate } = transformCreatedOnParams(
         createdOn,
         createdOnMin,
         createdOnMax

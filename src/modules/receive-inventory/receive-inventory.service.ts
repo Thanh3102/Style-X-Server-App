@@ -27,7 +27,7 @@ import { Response } from 'express';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { TagType } from '../tags/tag.type';
 import { Prisma } from '@prisma/client';
-import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
 
 @Injectable()
 export class ReceiveInventoryService {
@@ -575,7 +575,7 @@ export class ReceiveInventoryService {
     }
 
     if (createdOn || createdOnMin || createdOnMax) {
-      const { startDate, endDate } = tranformCreatedOnParams(
+      const { startDate, endDate } = transformCreatedOnParams(
         createdOn,
         createdOnMin,
         createdOnMax

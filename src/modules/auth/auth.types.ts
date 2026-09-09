@@ -1,8 +1,6 @@
-export interface JWTPayload {
-  id: number | string;
-  username?: string;
-  email: string;
-}
+import { RequestActor } from 'src/utils/types';
+
+export type JWTPayload = RequestActor;
 
 export type JWTToken = {
   accessToken: string;
