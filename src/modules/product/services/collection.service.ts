@@ -66,7 +66,7 @@ export class CollectionService {
         },
       });
 
-      const createdCollection = await this.prisma.collection.create({
+      await this.prisma.collection.create({
         data: {
           title: dto.title.trim(),
           slug: dto.slug.trim(),
@@ -107,7 +107,7 @@ export class CollectionService {
       if (isSlugExist)
         return res.status(400).json({ message: 'Đường dẫn đã tồn tại' });
 
-      const updatedCategory = await this.prisma.collection.update({
+      await this.prisma.collection.update({
         where: {
           id: parseInt(dto.id),
         },

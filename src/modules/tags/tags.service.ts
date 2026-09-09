@@ -26,8 +26,8 @@ export class TagsService {
 
   async getTags(res: Response, params: QueryParams) {
     const { limit: lim, page: pg, query, tagType } = params;
-    let page = convertToNumber(pg);
-    let limit = convertToNumber(lim);
+    const page = convertToNumber(pg);
+    const limit = convertToNumber(lim);
 
     // const tagCount = await this.prisma.tag.count();
 

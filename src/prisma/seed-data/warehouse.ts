@@ -2,12 +2,12 @@ type Warehouse = {
   name: string;
   code?: string;
   phoneNumber?: string;
-  email?: String;
-  country?: String;
-  province?: String;
-  district?: String;
-  ward?: String;
-  address?: String;
+  email?: string;
+  country?: string;
+  province?: string;
+  district?: string;
+  ward?: string;
+  address?: string;
 };
 export const warehouses: Warehouse[] = [
   {

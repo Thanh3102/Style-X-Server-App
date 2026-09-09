@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Post,
@@ -55,7 +54,7 @@ export class WarehousesController {
   getDetail(
     @Param('warehouse_id') warehouseId: string,
     @Query() params: QueryParams,
-    @Res() res,
+    @Res() res
   ) {
     return this.warehouseService.getDetail(parseInt(warehouseId), params, res);
   }

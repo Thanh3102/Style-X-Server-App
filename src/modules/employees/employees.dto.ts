@@ -28,4 +28,4 @@ export class UpdateEmployeeDto {
   dateOfBirth: string;
   isEmployed: boolean;
   password: string;
-};
+}

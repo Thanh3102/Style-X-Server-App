@@ -1,5 +1,5 @@
 export const convertToNumber = (
-  string: number | string | undefined,
+  string: number | string | undefined
 ): number | undefined => {
   if (string === undefined) {
     return undefined;

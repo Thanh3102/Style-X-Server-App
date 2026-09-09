@@ -133,7 +133,7 @@ export class CustomerService {
 
   async getDetail(customerId: string, query: QueryParams, res: Response) {
     const { sortBy } = query;
-    let sortOrder: Prisma.OrderOrderByWithRelationInput = {};
+    const sortOrder: Prisma.OrderOrderByWithRelationInput = {};
 
     if (sortBy) {
       switch (sortBy) {
@@ -493,8 +493,6 @@ export class CustomerService {
       },
     });
 
-    return customer
+    return customer;
   }
-
-  
 }

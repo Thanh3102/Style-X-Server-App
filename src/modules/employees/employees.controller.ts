@@ -99,7 +99,7 @@ export class EmployeesController {
   changePassword(
     @Body() dto: { oldPassword: string; newPassword: string },
     @Req() req,
-    @Res() res,
+    @Res() res
   ) {
     return this.employeeService.changePassword(dto, req, res);
   }

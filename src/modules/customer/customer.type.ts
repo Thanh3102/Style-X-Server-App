@@ -65,11 +65,11 @@ export type OrderHistory = {
         id: number;
         name: string;
         image: string;
-      },
+      };
       variant: {
         id: number;
         title: string;
-      }
+      };
     }>;
   }>;
   paginition: PaginitionData;

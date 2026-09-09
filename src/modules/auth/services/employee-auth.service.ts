@@ -1,9 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { EmployeesService } from '../../employees/employees.service';
 import { TokenService } from './token.service';
 import { EmployeeSignInDTO } from '../auth.dto';
 import { EmployeeSignInResponseDTO, JWTPayload } from '../auth.types';
-
 
 @Injectable()
 export class EmployeeAuthService {
@@ -24,10 +23,11 @@ export class EmployeeAuthService {
       email: employee.email,
     };
 
-    const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(
-      payload,
-      dto.isRemember ?? false
-    );
+    const { accessToken, refreshToken } =
+      await this.tokenService.generateTokenPair(
+        payload,
+        dto.isRemember ?? false
+      );
 
     return {
       user: {

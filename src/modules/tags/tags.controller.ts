@@ -21,5 +21,4 @@ export class TagsController {
   getTag(@Query() queryParams: QueryParams, @Res() res) {
     return this.tagService.getTags(res, queryParams);
   }
-
 }

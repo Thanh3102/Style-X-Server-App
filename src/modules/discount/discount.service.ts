@@ -331,7 +331,7 @@ export class DiscountService {
     const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let whereConditon: Prisma.DiscountWhereInput = {
+    const whereConditon: Prisma.DiscountWhereInput = {
       void: false,
     };
 
@@ -912,10 +912,9 @@ export class DiscountService {
   async calcVariantDiscount(
     variant: { sellPrice: number; id: number },
     activeProductPromotions: ActiveDiscount[],
-    options?: { withPrerequire?: boolean }
+    _options?: { withPrerequire?: boolean }
   ) {
     try {
-      const { withPrerequire = false } = options ?? {};
       // Tính giảm giá sản phẩm
       // Lọc ra các chương trình áp dụng và không có điều kiện tiên quyết (prerequire)
       const nonePrerequirePromotions = activeProductPromotions.filter(
@@ -1286,9 +1285,6 @@ export class DiscountService {
       totalOrderAfterDiscount: totalOrderAfterDiscount,
       totalOrderDiscountAmount: totalOrderDiscountAmount,
     };
-
-    const { finalItems, ...rest } = data;
-    console.log('Data:', rest);
 
     return data;
   }

@@ -126,7 +126,7 @@ export class WarehousesService {
 
         if (receives || orderSources) {
           throw new BadRequestException(
-            'Không thể cập nhật trạng thái khi kho hàng vẫn còn giao dịch chưa hoàn thành',
+            'Không thể cập nhật trạng thái khi kho hàng vẫn còn giao dịch chưa hoàn thành'
           );
         }
       }

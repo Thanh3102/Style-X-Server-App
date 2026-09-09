@@ -62,5 +62,5 @@ export class ProcessPaymentDTO {
 
 export class CancelReceiveInventoryDTO {
   receiveId: number;
-  returnItem: boolean
+  returnItem: boolean;
 }

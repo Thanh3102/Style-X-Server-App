@@ -57,7 +57,7 @@ export class DiscountController {
   updateActive(
     @Param('id') id: string,
     @Body() { active }: { active: boolean },
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     if (!isInteger(id))
       return res.json({ message: 'Mã khuyến mại không hơp lệ' });

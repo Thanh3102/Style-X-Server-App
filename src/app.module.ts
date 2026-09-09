@@ -1,5 +1,5 @@
 import { Logger, Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { EmployeesModule } from './modules/employees/employees.module';
 import { ProductModule } from './modules/product/product.module';
@@ -17,7 +17,7 @@ import { OrderModule } from './modules/order/order.module';
 import { ReportModule } from './modules/report/report.module';
 import { CustomerModule } from './modules/customer/customer.module';
 import { CacheModule } from '@nestjs/cache-manager';
-import KeyvRedis, { Keyv } from '@keyv/redis';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   imports: [

@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { hashPlainText } from 'src/utils/helper/bcryptHelper';
 import { accounts } from './seed-data/account';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
-import { warehouses } from './seed-data/warehouse';
 import { collections } from './seed-data/collections';
 import { generateProduct } from './seed-data/product';
 import {
@@ -52,7 +51,7 @@ async function createAdminRole() {
 }
 
 async function createSystemAccount() {
-  for (let acc of accounts) {
+  for (const acc of accounts) {
     const hash = await hashPlainText(acc.password);
     const code = acc.code ?? (await generateCustomID('USER', 'employee'));
     await prisma.employee.create({
@@ -89,7 +88,7 @@ async function createWarehouse() {
 }
 
 async function createCollections() {
-  for (let collection of collections) {
+  for (const collection of collections) {
     await prisma.collection.create({
       data: {
         title: collection.title,
@@ -108,7 +107,7 @@ async function createCollections() {
 async function createProducts() {
   const categories = await prisma.category.findMany();
 
-  for (let category of categories) {
+  for (const category of categories) {
     for (let i = 0; i < 10; i++) {
       const skuCode = await generateCustomID('SKU', 'product', 'skuCode');
       const product = generateProduct(category.id, category.title);

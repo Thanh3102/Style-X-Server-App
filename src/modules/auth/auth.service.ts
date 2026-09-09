@@ -24,17 +24,28 @@ export class AuthService {
     private readonly tokenService: TokenService
   ) {}
 
-  async employeeSignIn(dto: EmployeeSignInDTO): Promise<EmployeeSignInResponseDTO> {
+  async employeeSignIn(
+    dto: EmployeeSignInDTO
+  ): Promise<EmployeeSignInResponseDTO> {
     return this.employeeAuthService.signIn(dto);
   }
 
-  async customerSignIn(dto: CustomerSignInDTO): Promise<CustomerSignInResponseDTO> {
+  async customerSignIn(
+    dto: CustomerSignInDTO
+  ): Promise<CustomerSignInResponseDTO> {
     return this.customerAuthService.signIn(dto);
   }
 
-  async refreshAccessToken(accessToken: string, refreshToken: string): Promise<JWTToken> {
-    const accessTokenPayload = await this.tokenService.verifyAccessToken(accessToken, true);
-    const refreshTokenPayload = await this.tokenService.verifyRefreshToken(refreshToken);
+  async refreshAccessToken(
+    accessToken: string,
+    refreshToken: string
+  ): Promise<JWTToken> {
+    const accessTokenPayload = await this.tokenService.verifyAccessToken(
+      accessToken,
+      true
+    );
+    const refreshTokenPayload =
+      await this.tokenService.verifyRefreshToken(refreshToken);
 
     if (
       !refreshTokenPayload.type ||
@@ -46,7 +57,7 @@ export class AuthService {
 
     const { iat, exp, expiredIn, ...payload } = accessTokenPayload;
     const newAccessToken = await this.tokenService.signNewAccessToken(payload);
-    
+
     return this.tokenService.buildTokenResponse(newAccessToken, refreshToken);
   }
 

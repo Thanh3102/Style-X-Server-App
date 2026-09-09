@@ -328,8 +328,6 @@ export class OrderCommandService {
       // Tìm giảm giá đơn hàng không kết hợp lớn nhất
       if (cannotCombineOrderPromotion.length > 0) {
         let maxNonCombineDiscountAmount = -1;
-        let discountValue = 0;
-        let applyPromotion = null;
         for (const promotion of cannotCombineOrderPromotion) {
           switch (promotion.valueType) {
             case 'percent':
@@ -343,9 +341,7 @@ export class OrderCommandService {
                     : promotion.valueLimitAmount;
               }
               if (percentDiscountValue > maxNonCombineDiscountAmount) {
-                (maxNonCombineDiscountAmount = percentDiscountValue),
-                  (applyPromotion = promotion);
-                discountValue = percentDiscountValue;
+                maxNonCombineDiscountAmount = percentDiscountValue;
               }
               break;
             case 'value':
@@ -355,8 +351,6 @@ export class OrderCommandService {
                   : 0;
               if (valueDiscountValue > maxNonCombineDiscountAmount) {
                 maxNonCombineDiscountAmount = valueDiscountValue;
-                applyPromotion = promotion;
-                discountValue = valueDiscountValue;
               }
               break;
           }
@@ -477,9 +471,9 @@ export class OrderCommandService {
         break;
     }
 
-    let newTotalOrderAfterDiscount =
+    const newTotalOrderAfterDiscount =
       order.totalOrderAfterDiscount - discountValue;
-    let newTotalOrderDiscountAmount =
+    const newTotalOrderDiscountAmount =
       order.totalOrderDiscountAmount + discountValue;
 
     console.log('discount amount', discountValue);

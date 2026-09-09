@@ -230,7 +230,7 @@ export class ProductQueryService {
     const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let whereCondition: Prisma.ProductWhereInput = {
+    const whereCondition: Prisma.ProductWhereInput = {
       void: false,
     };
 
@@ -378,7 +378,7 @@ export class ProductQueryService {
     const limit = !isNaN(Number(lim)) ? Number(lim) : 10;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let whereCondition: any = {
+    const whereCondition: any = {
       void: false,
     };
 
@@ -555,7 +555,7 @@ export class ProductQueryService {
   async getCategories(queryParams: QueryParams) {
     const { query } = queryParams;
 
-    let conditions = {
+    const conditions = {
       query: {},
     };
 
@@ -624,12 +624,12 @@ export class ProductQueryService {
   private tranformPublicProductParamsToQuery = async (
     params: PublicProductParams
   ) => {
-    const { query, category, slug, sort, priceRange } = params;
-    let where: Prisma.ProductWhereInput = {
+    const { query, category, slug } = params;
+    const where: Prisma.ProductWhereInput = {
       avaiable: true,
       void: false,
     };
-    let orderBy: Prisma.ProductOrderByWithRelationInput = {
+    const orderBy: Prisma.ProductOrderByWithRelationInput = {
       createdAt: 'desc',
     };
 
@@ -664,7 +664,7 @@ export class ProductQueryService {
 
   async fetchProductPublic(params: PublicProductParams, res: Response) {
     try {
-      const { page: pg, limit: lim, priceRange } = params;
+      const { page: pg, limit: lim } = params;
 
       let page = 1;
       let limit = 20;

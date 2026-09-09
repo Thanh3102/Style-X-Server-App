@@ -1,11 +1,9 @@
 import {
-  BadRequestException,
   Inject,
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Prisma } from '@prisma/client';
 import { Cache } from 'cache-manager';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -178,7 +176,7 @@ export class ProductCommandService {
             },
           });
 
-          for (let dtoTag of dto.tags) {
+          for (const dtoTag of dto.tags) {
             const findTag = allProductTags.find((tag) => tag.name === dtoTag);
             if (findTag) {
               await p.productTag.create({

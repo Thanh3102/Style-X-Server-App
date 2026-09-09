@@ -1,5 +1,5 @@
-import { Prisma, PrismaClient } from "@prisma/client";
-import { DefaultArgs } from "@prisma/client/runtime/library";
+import { Prisma, PrismaClient } from '@prisma/client';
+import { DefaultArgs } from '@prisma/client/runtime/library';
 
 export type PrismaTransactionObject = Omit<
   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,

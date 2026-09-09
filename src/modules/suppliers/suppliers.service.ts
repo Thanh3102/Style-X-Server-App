@@ -18,10 +18,7 @@ import { TagsService } from '../tags/tags.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { EmployeesService } from '../employees/employees.service';
 import { QueryParams } from 'src/utils/types';
-import {
-  convertParamsToCondition,
-  tranformCreatedOnParams,
-} from 'src/utils/helper/DateHelper';
+import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { Prisma } from '@prisma/client';
 
@@ -79,7 +76,7 @@ export class SuppliersService {
         });
 
         // Tạo supplier-tag - Tạo tag mới nếu chưa tồn tại
-        for (let dtoTag of dto.tags) {
+        for (const dtoTag of dto.tags) {
           const findTag = allSupplierTags.find((tag) => tag.name === dtoTag);
           if (findTag) {
             await p.supplierTag.create({
@@ -187,17 +184,17 @@ export class SuppliersService {
         });
 
         // Lọc ra các tag cần xóa khỏi supplier hiện tại
-        let deletedSupplierTagIds: number[] = [];
-        for (let tag of supplierTags) {
+        const deletedSupplierTagIds: number[] = [];
+        for (const tag of supplierTags) {
           const findTag = dto.tags.find((t) => t === tag.name);
           if (!findTag) deletedSupplierTagIds.push(tag.id);
         }
 
         // Danh sách tag cần tạo mới
-        let addedTags: string[] = [];
+        const addedTags: string[] = [];
 
         // Danh sách tag đã tồn tại, chỉ cập nhật thời gian sử dụng
-        let updateLastUsedTags: string[] = [];
+        const updateLastUsedTags: string[] = [];
 
         // Lọc ra các tag cần thêm vào và các tag cần update lần cuối sử dụng
         dto.tags.map((tagName) => {
@@ -207,7 +204,7 @@ export class SuppliersService {
         });
 
         // Tạo supplier tag - Tạo tag mới nếu chưa tồn tại
-        for (let addedTag of addedTags) {
+        for (const addedTag of addedTags) {
           const findTag = allSupplierTags.find((tag) => tag.name === addedTag);
           if (findTag) {
             await p.supplierTag.create({
@@ -343,7 +340,7 @@ export class SuppliersService {
     if (assignIds && typeof assignIds === 'string') {
       const stringValues = assignIds.split(',');
       const values: Set<number> = new Set();
-      for (let v of stringValues) {
+      for (const v of stringValues) {
         if (!isNaN(Number(v))) values.add(Number(v));
       }
 

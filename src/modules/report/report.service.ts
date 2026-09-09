@@ -344,7 +344,7 @@ export class ReportService {
         reportDate === DateFilterOptionValue.THIS_YEAR ||
         reportDate === DateFilterOptionValue.LAST_YEAR
       ) {
-        let currentDate = new Date(startDate);
+        const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           const startOfMonth = new Date(currentDate);
           startOfMonth.setDate(1);
@@ -379,7 +379,7 @@ export class ReportService {
             },
           });
 
-          const [d, m, y] = Intl.DateTimeFormat('vi-VN', {
+          const [, m] = Intl.DateTimeFormat('vi-VN', {
             dateStyle: 'short',
           })
             .format(currentDate)
@@ -395,7 +395,7 @@ export class ReportService {
           currentDate.setMonth(currentDate.getMonth() + 1);
         }
       } else {
-        let currentDate = new Date(startDate);
+        const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           const startOfDay = new Date(currentDate);
           startOfDay.setHours(0, 0, 0, 0);
@@ -428,7 +428,7 @@ export class ReportService {
             },
           });
 
-          const [d, m, y] = Intl.DateTimeFormat('vi-VN', {
+          const [d, m] = Intl.DateTimeFormat('vi-VN', {
             dateStyle: 'short',
           })
             .format(currentDate)
@@ -594,7 +594,7 @@ export class ReportService {
       }
 
       const sortProductSale = productSales.sort(
-        (a, b) => b.revenue - a.revenue,
+        (a, b) => b.revenue - a.revenue
       );
 
       const repsonseData = sortProductSale.slice(0, 5);
@@ -644,7 +644,7 @@ export class ReportService {
 
       for (const variant of productVariants) {
         let totalOnHand = 0;
-        let warehouses: ReportLowStock[0]['warehouses'] = [];
+        const warehouses: ReportLowStock[0]['warehouses'] = [];
         for (const inven of variant.inventories) {
           totalOnHand += inven.onHand;
           warehouses.push({
@@ -674,7 +674,7 @@ export class ReportService {
         }
       }
 
-      const responseData = lowStockReport.sort((a, b) => a.onHand - b.onHand);
+      lowStockReport.sort((a, b) => a.onHand - b.onHand);
 
       return res.status(200).json(lowStockReport);
     } catch (error) {
@@ -796,7 +796,7 @@ export class ReportService {
         reportDate === DateFilterOptionValue.THIS_YEAR ||
         reportDate === DateFilterOptionValue.LAST_YEAR
       ) {
-        let currentDate = new Date(startDate);
+        const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           const startOfMonth = new Date(currentDate);
           startOfMonth.setDate(1);
@@ -879,7 +879,7 @@ export class ReportService {
           totalAverageOrderValue += AverageOrderValue;
           totalCost += totalCostPrice;
 
-          const [d, m, y] = Intl.DateTimeFormat('vi-VN', {
+          const [, m, y] = Intl.DateTimeFormat('vi-VN', {
             dateStyle: 'short',
           })
             .format(currentDate)
@@ -901,7 +901,7 @@ export class ReportService {
           currentDate.setMonth(currentDate.getMonth() + 1);
         }
       } else {
-        let currentDate = new Date(startDate);
+        const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
           const startOfDay = new Date(currentDate);
           startOfDay.setHours(0, 0, 0, 0);
@@ -1167,7 +1167,7 @@ export class ReportService {
           reportDate === DateFilterOptionValue.THIS_YEAR ||
           reportDate === DateFilterOptionValue.LAST_YEAR
         ) {
-          let currentDate = new Date(startDate);
+          const currentDate = new Date(startDate);
           while (currentDate <= endDate) {
             const startOfMonth = new Date(currentDate);
             startOfMonth.setDate(1);
@@ -1274,7 +1274,7 @@ export class ReportService {
             totalAverageOrderValue += NetRevenue / NumberOfOrder;
             totalCost += totalCostPrice;
 
-            const [d, m, y] = Intl.DateTimeFormat('vi-VN', {
+            const [, m, y] = Intl.DateTimeFormat('vi-VN', {
               dateStyle: 'short',
             })
               .format(currentDate)
@@ -1296,7 +1296,7 @@ export class ReportService {
             currentDate.setMonth(currentDate.getMonth() + 1);
           }
         } else {
-          let currentDate = new Date(startDate);
+          const currentDate = new Date(startDate);
           while (currentDate <= endDate) {
             const startOfDay = new Date(currentDate);
             startOfDay.setHours(0, 0, 0, 0);
@@ -1438,7 +1438,7 @@ export class ReportService {
       }
 
       const sortResponse = response.sort(
-        (a, b) => b.totalNetRevenue - a.totalNetRevenue,
+        (a, b) => b.totalNetRevenue - a.totalNetRevenue
       );
 
       return res.status(200).json(sortResponse);

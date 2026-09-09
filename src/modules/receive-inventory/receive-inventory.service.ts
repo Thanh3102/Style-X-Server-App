@@ -366,7 +366,7 @@ export class ReceiveInventoryService {
             },
           });
 
-          for (let dtoTag of dto.tags) {
+          for (const dtoTag of dto.tags) {
             const findTag = allReceiveTags.find((tag) => tag.name === dtoTag);
             if (findTag) {
               await p.receiveInventoryTag.create({
@@ -531,7 +531,7 @@ export class ReceiveInventoryService {
     const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
     const skip = page === 1 ? 0 : (page - 1) * limit;
 
-    let whereCondition: Prisma.ReceiveInventoryWhereInput = {
+    const whereCondition: Prisma.ReceiveInventoryWhereInput = {
       void: false,
     };
 

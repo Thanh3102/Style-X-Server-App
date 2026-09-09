@@ -21,7 +21,7 @@ export class MailService {
   async sendUserCheckoutComplete(
     order: any,
     email: string,
-    customerName: string,
+    customerName: string
   ) {
     await this.mailerService.sendMail({
       to: email,

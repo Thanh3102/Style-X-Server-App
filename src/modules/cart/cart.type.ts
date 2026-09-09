@@ -1,5 +1,3 @@
-import { CartService } from './cart.service';
-
 export type AddItemDto = {
   productId: number;
   variantId: number;

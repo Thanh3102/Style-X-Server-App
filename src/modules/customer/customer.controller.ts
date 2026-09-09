@@ -28,7 +28,7 @@ export class CustomerController {
   getOrderHistory(
     @Query() query: { status: string; page: string; limit: string },
     @Req() req,
-    @Res() res,
+    @Res() res
   ) {
     return this.customerService.getOrderHistory(query, req, res);
   }
@@ -57,7 +57,7 @@ export class CustomerController {
   getCustomerDetail(
     @Param('customerId') customerId,
     @Query() query: QueryParams,
-    @Res() res,
+    @Res() res
   ) {
     return this.customerService.getDetail(customerId, query, res);
   }
@@ -72,7 +72,7 @@ export class CustomerController {
   @Post('/reset-password')
   resetPassword(
     @Body() dto: { token: string; newPassword: string },
-    @Res() res,
+    @Res() res
   ) {
     return this.customerService.resetPassword(dto.token, dto.newPassword, res);
   }

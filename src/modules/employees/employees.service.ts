@@ -16,7 +16,6 @@ import {
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { Prisma } from '@prisma/client';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { parse } from 'path';
 
 @Injectable()
 export class EmployeesService {

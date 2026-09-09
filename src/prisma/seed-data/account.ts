@@ -1,12 +1,12 @@
 export const accounts = [
   {
-    code: "SYSTEM",
+    code: 'SYSTEM',
     username: 'system',
     password: 'REDACTED_SEED_PASSWORD',
     name: 'System',
   },
   {
-    code: "ADMIN",
+    code: 'ADMIN',
     username: 'admin',
     password: 'REDACTED_SEED_PASSWORD',
     name: 'Admin',

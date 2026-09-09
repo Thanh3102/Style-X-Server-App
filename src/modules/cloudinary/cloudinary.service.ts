@@ -3,13 +3,13 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiOptions } from 'cloudinary';
 import { CloudinaryResponse } from './cloudinary.type';
-const streamifier = require('streamifier');
+import * as streamifier from 'streamifier';
 
 @Injectable()
 export class CloudinaryService {
   uploadFile(
     file: Express.Multer.File,
-    options?: UploadApiOptions,
+    options?: UploadApiOptions
   ): Promise<CloudinaryResponse> {
     return new Promise<CloudinaryResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -17,7 +17,7 @@ export class CloudinaryService {
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
-        },
+        }
       );
 
       streamifier.createReadStream(file.buffer).pipe(uploadStream);

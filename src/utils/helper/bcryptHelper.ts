@@ -8,9 +8,8 @@ export const hashPlainText = async (plainText: string) => {
 
 export const comparePassword = async (
   password: string,
-  hashPassword: string,
+  hashPassword: string
 ) => {
   const isCorrect = await bcrypt.compare(password, hashPassword);
   return isCorrect;
 };
-

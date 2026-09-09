@@ -56,7 +56,7 @@ export class ReceiveInventoryController {
   create(
     @Body() dto: CreateReceiveInventoryDTO,
     @Req() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.receiveInventoryService.create(dto, req, res);
   }
@@ -66,7 +66,7 @@ export class ReceiveInventoryController {
   update(
     @Body() dto: UpdateReceiveInventoryDTO,
     @Req() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.receiveInventoryService.update(dto, req, res);
   }
@@ -76,7 +76,7 @@ export class ReceiveInventoryController {
   cancel(
     @Body() dto: CancelReceiveInventoryDTO,
     @Req() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.receiveInventoryService.cancel(dto, req, res);
   }
