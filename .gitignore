@@ -39,3 +39,7 @@ lerna-debug.log*
 
 # Dockerfile
 Dockerfile
+
+# AI Agents
+.agents
+AGENTS.md

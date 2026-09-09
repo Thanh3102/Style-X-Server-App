@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   HttpCode,
+  HttpException,
   HttpStatus,
   InternalServerErrorException,
   Logger,
@@ -35,7 +36,9 @@ export class AuthController {
 
   @Post('/employee/sign-in')
   @HttpCode(HttpStatus.OK)
-  async signIn(@Body() dto: EmployeeSignInDTO): Promise<EmployeeSignInResponseDTO> {
+  async signIn(
+    @Body() dto: EmployeeSignInDTO
+  ): Promise<EmployeeSignInResponseDTO> {
     try {
       return await this.authService.employeeSignIn(dto);
     } catch (error: unknown) {
@@ -49,27 +52,40 @@ export class AuthController {
   @Post('/refreshToken')
   @HttpCode(HttpStatus.OK)
   async refreshToken(@Body() dto: RefreshTokenDTO): Promise<JWTToken> {
-    return this.authService.refreshAccessToken(dto.accessToken, dto.refreshToken);
+    return this.authService.refreshAccessToken(
+      dto.accessToken,
+      dto.refreshToken
+    );
   }
 
   @Public()
   @Post('/customer/signin')
   @HttpCode(HttpStatus.OK)
-  async customerSignIn(@Body() dto: CustomerSignInDTO): Promise<CustomerSignInResponseDTO> {
+  async customerSignIn(
+    @Body() dto: CustomerSignInDTO
+  ): Promise<CustomerSignInResponseDTO> {
     try {
       return await this.authService.customerSignIn(dto);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
       const stack = error instanceof Error ? error.stack : undefined;
       this.logger.error(`customerSignIn failed: ${message}`, stack);
-      throw new InternalServerErrorException(message);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      // Chỉ biến lỗi không dự kiến thành 500.
+      throw new InternalServerErrorException('Đã xảy ra lỗi. Vui lòng thử lại');
     }
   }
 
   @Public()
   @Post('/customer/signup')
   @HttpCode(HttpStatus.OK)
-  async customerSignUp(@Body() dto: CustomerSignUpDTO): Promise<{ message: string }> {
+  async customerSignUp(
+    @Body() dto: CustomerSignUpDTO
+  ): Promise<{ message: string }> {
     try {
       const result = await this.authService.customerSignUp(dto);
 
@@ -92,7 +108,9 @@ export class AuthController {
   @Public()
   @Post('/customer/signup/verify')
   @HttpCode(HttpStatus.OK)
-  async verifySignUpOtp(@Body() dto: VerifySignUpDTO): Promise<{ message: string }> {
+  async verifySignUpOtp(
+    @Body() dto: VerifySignUpDTO
+  ): Promise<{ message: string }> {
     try {
       const result = await this.authService.verifySignUpOtp(dto);
 
@@ -105,7 +123,10 @@ export class AuthController {
 
       return { message: result.message };
     } catch (error: unknown) {
-      if (error instanceof BadRequestException || error instanceof NotFoundException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
         throw error;
       }
       const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';

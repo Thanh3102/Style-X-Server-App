@@ -1,7 +1,10 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
@@ -27,7 +30,7 @@ export class SuppliersService {
   constructor(
     private prisma: PrismaService,
     private tagService: TagsService,
-    private employeeService: EmployeesService,
+    private employeeService: EmployeesService
   ) {}
 
   private codePrefix = 'SUP';
@@ -120,7 +123,7 @@ export class SuppliersService {
     } catch (error) {
       console.log(error);
       throw new InternalServerErrorException(
-        'Đã xảy ra lỗi khi tạo nhà cung cấp',
+        'Đã xảy ra lỗi khi tạo nhà cung cấp'
       );
     }
   }
@@ -328,7 +331,7 @@ export class SuppliersService {
       const { startDate, endDate } = tranformCreatedOnParams(
         createdOn,
         createdOnMin,
-        createdOnMax,
+        createdOnMax
       );
       if (startDate || endDate) {
         where.createdAt = {};
@@ -461,21 +464,24 @@ export class SuppliersService {
         .status(200)
         .json({ ...supplier, tags, assigned: { ...assignedData }, receives });
     } catch (error) {
-      // console.log(error);
-      return res.status(500).json({ error: error.message });
+      Logger.error(error);
+      if (error instanceof HttpException) throw error;
+      return res.status(500).json({
+        message: 'Hệ thống đã xảy ra lỗi',
+      });
     }
   }
 
   async checkCode(
     code: string | undefined,
-    options: CheckCodeOptions = { checkExist: true, checkPrefix: true },
+    options: CheckCodeOptions = { checkExist: true, checkPrefix: true }
   ) {
     const { checkExist, checkPrefix } = options;
     if (!code) return;
 
     if (checkPrefix && code.startsWith(this.codePrefix))
       throw new BadRequestException(
-        `Mã nhà cung cấp không được bắt đầu là ${this.codePrefix}`,
+        `Mã nhà cung cấp không được bắt đầu là ${this.codePrefix}`
       );
 
     if (checkExist) {
@@ -503,8 +509,10 @@ export class SuppliersService {
       },
     });
 
-    if (!record) throw new Error('Nhà cung cấp không tồn tại');
-
-    if (record.void) throw new Error('Nhà cung cấp đã bị xóa');
+    if (!record || record.void) {
+      throw new NotFoundException({
+        message: 'Nhà cung cấp không tồn tại hoặc đã bị xoá',
+      });
+    }
   }
 }
