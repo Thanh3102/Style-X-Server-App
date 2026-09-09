@@ -1,6 +1,6 @@
 import {
-  BadRequestException,
   Injectable,
+  Logger,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -10,126 +10,50 @@ import {
   UpdateDiscountDTO,
 } from './discount.type';
 import { Response } from 'express';
-import { isInteger } from 'src/utils/helper/StringHelper';
 import { QueryParams } from 'src/utils/types';
-import { Prisma } from '@prisma/client';
-import { Cron } from '@nestjs/schedule';
 import { CartItemData } from '../cart/cart.type';
+import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
+import {
+  ActiveDiscountOptions,
+  ActiveDiscountResult,
+  EntitledCategory,
+  EntitledProduct,
+  EntitledVariant,
+  VoucherResult,
+} from './discount-query.type';
+import { DiscountQueryService } from './services/discount-query.service';
+import { DiscountExpirationService } from './services/discount-expiration.service';
 
 @Injectable()
 export class DiscountService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(DiscountService.name);
 
-  @Cron('0 0 0 * * *')
-  async updateExpireDiscount() {
-    try {
-      const expireDiscounts = await this.prisma.discount.findMany({
-        where: {
-          endOn: {
-            not: null,
-            lt: new Date(),
-          },
-        },
-        select: {
-          id: true,
-        },
-      });
+  constructor(
+    private prisma: PrismaService,
+    private readonly queryService: DiscountQueryService,
+    private readonly expirationService: DiscountExpirationService
+  ) {}
 
-      const updateIds = expireDiscounts.map((discount) => discount.id);
-
-      await this.prisma.discount.updateMany({
-        where: {
-          id: {
-            in: updateIds,
-          },
-        },
-        data: {
-          active: false,
-        },
-      });
-      console.log('Unactive discount ids: ', updateIds.join(', '));
-    } catch (error) {
-      console.log(error);
-    }
+  async updateExpireDiscount(): Promise<void> {
+    return this.expirationService.updateExpireDiscount();
   }
 
-  private getEntitledProduct = async (discountId: number) => {
-    const discountProductIds = await this.prisma.discountProduct.findMany({
-      where: {
-        discountId: discountId,
-      },
-      select: {
-        productId: true,
-      },
-    });
-
-    const products = await this.prisma.product.findMany({
-      select: {
-        id: true,
-        name: true,
-        image: true,
-      },
-      where: {
-        id: {
-          in: discountProductIds.map((item) => item.productId),
-        },
-      },
-    });
-
-    return products;
+  private getEntitledProduct = async (
+    discountId: number
+  ): Promise<EntitledProduct[]> => {
+    return this.queryService.getEntitledProduct(discountId);
   };
 
-  private getEntitledVariant = async (discountId: number) => {
-    const discountVariantIds = await this.prisma.discountVariant.findMany({
-      where: {
-        discountId: discountId,
-      },
-      select: {
-        variantId: true,
-      },
-    });
-
-    const variants = await this.prisma.productVariants.findMany({
-      select: {
-        id: true,
-        title: true,
-        image: true,
-        productId: true,
-      },
-      where: {
-        id: {
-          in: discountVariantIds.map((item) => item.variantId),
-        },
-      },
-    });
-
-    return variants;
+  private getEntitledVariant = async (
+    discountId: number
+  ): Promise<EntitledVariant[]> => {
+    return this.queryService.getEntitledVariant(discountId);
   };
 
-  private getEntitledCategory = async (discountId: number) => {
-    const discountCategoryIds = await this.prisma.discountCategory.findMany({
-      where: {
-        discountId: discountId,
-      },
-      select: {
-        categoryId: true,
-      },
-    });
-
-    const categories = await this.prisma.category.findMany({
-      select: {
-        id: true,
-        title: true,
-        collection: true,
-      },
-      where: {
-        id: {
-          in: discountCategoryIds.map((item) => item.categoryId),
-        },
-      },
-    });
-
-    return categories;
+  private getEntitledCategory = async (
+    discountId: number
+  ): Promise<EntitledCategory[]> => {
+    return this.queryService.getEntitledCategory(discountId);
   };
 
   private checkTitleExist = async (
@@ -286,117 +210,23 @@ export class DiscountService {
     }
   }
 
-  async getDetail(id: string, res: Response) {
+  async getDetail(id: string, res: Response): Promise<Response> {
     try {
-      if (!isInteger(id))
-        throw new BadRequestException('Mã khuyến mại không hợp lệ');
-      const discountId = parseInt(id);
-
-      const discount = await this.prisma.discount.findUnique({
-        where: {
-          id: discountId,
-        },
-        include: {
-          createdUser: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (discount.void) {
-        throw new BadRequestException('Khuyến mại đã bị xóa');
-      }
-
-      const discountProducts = await this.getEntitledProduct(discountId);
-      const discountVariants = await this.getEntitledVariant(discountId);
-      const discountCategorys = await this.getEntitledCategory(discountId);
-
-      return res.json({
-        ...discount,
-        products: discountProducts,
-        variants: discountVariants,
-        categories: discountCategorys,
-      });
-    } catch (error) {
+      const discount = await this.queryService.getDetail(id);
+      return res.json(discount);
+    } catch (error: unknown) {
       throw new InternalServerErrorException(error);
     }
   }
 
-  async get(queryParams: QueryParams, res: Response) {
-    const { page: pg, limit: lim, query, mode, active, type } = queryParams;
-
-    const page = !isNaN(Number(pg)) ? Number(pg) : 1;
-    const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
-    const skip = page === 1 ? 0 : (page - 1) * limit;
-
-    const whereConditon: Prisma.DiscountWhereInput = {
-      void: false,
-    };
-
-    if (query) {
-      whereConditon.title = {
-        startsWith: query,
-      };
-    }
-
-    if (mode) {
-      whereConditon.mode = mode;
-    }
-
-    if (type) {
-      whereConditon.type = type;
-    }
-
-    if (active) {
-      whereConditon.active = active === 'true';
-    }
+  async get(queryParams: QueryParams, res: Response): Promise<Response> {
+    const preparedQuery = this.queryService.prepareListQuery(queryParams);
 
     try {
-      const discounts = await this.prisma.discount.findMany({
-        where: whereConditon,
-        select: {
-          id: true,
-          mode: true,
-          active: true,
-          description: true,
-          startOn: true,
-          endOn: true,
-          createdAt: true,
-          usage: true,
-          usageLimit: true,
-          combinesWithOrderDiscount: true,
-          combinesWithProductDiscount: true,
-          summary: true,
-          title: true,
-          type: true,
-          void: true,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip: skip,
-        take: limit,
-      });
-
-      const countTotal = await this.prisma.discount.count({
-        where: whereConditon,
-      });
-
-      const totalPage = Math.ceil(countTotal / limit);
-
-      return res.json({
-        discounts: discounts,
-        paginition: {
-          total: totalPage,
-          count: countTotal,
-          page: page,
-          limit: limit,
-        },
-      });
-    } catch (error) {
-      console.log(error);
+      const result = await this.queryService.get(preparedQuery);
+      return res.json(result);
+    } catch (error: unknown) {
+      this.logger.error(getErrorMessage(error), getErrorStack(error));
       throw new InternalServerErrorException(error);
     }
   }
@@ -698,87 +528,10 @@ export class DiscountService {
     }
   }
 
-  async getActiveDiscounts(options: {
-    mode: Array<'coupon' | 'promotion'>;
-    type: Array<'product' | 'order'>;
-  }) {
-    const { mode, type } = options;
-
-    try {
-      const discounts = await this.prisma.discount.findMany({
-        where: {
-          active: true,
-          void: false,
-          mode: {
-            in: mode,
-          },
-          type: {
-            in: type,
-          },
-          startOn: {
-            lte: new Date(),
-          },
-          OR: [
-            {
-              endOn: null,
-            },
-            {
-              endOn: {
-                gte: new Date(),
-              },
-            },
-          ],
-        },
-        include: {
-          entitleCategories: {
-            select: {
-              category: {
-                select: {
-                  id: true,
-                },
-              },
-            },
-          },
-          entitleProducts: {
-            select: {
-              product: {
-                select: {
-                  id: true,
-                },
-              },
-            },
-          },
-          entitleVariants: {
-            select: {
-              variant: {
-                select: {
-                  id: true,
-                },
-              },
-            },
-          },
-        },
-      });
-      const responseDiscounts = discounts.map((discount) => {
-        const { entitleCategories, entitleProducts, entitleVariants, ...rest } =
-          discount;
-
-        const productIds = entitleProducts.map((item) => item.product.id);
-        const variantIds = entitleVariants.map((item) => item.variant.id);
-        const categoryIds = entitleCategories.map((item) => item.category.id);
-        return {
-          ...rest,
-          productIds,
-          variantIds,
-          categoryIds,
-        };
-      });
-
-      return responseDiscounts;
-    } catch (error) {
-      console.log(error);
-      return [];
-    }
+  async getActiveDiscounts(
+    options: ActiveDiscountOptions
+  ): Promise<ActiveDiscountResult[]> {
+    return this.queryService.getActiveDiscounts(options);
   }
 
   // async calcProductDiscount(
@@ -1503,31 +1256,7 @@ export class DiscountService {
     }
   }
 
-  async findVoucher(title: string) {
-    const voucher = await this.prisma.discount.findFirst({
-      where: {
-        title: title,
-        mode: 'coupon',
-      },
-      include: {
-        entitleCategories: true,
-        entitleProducts: true,
-        entitleVariants: true,
-      },
-    });
-
-    if (!voucher) return null;
-
-    const formatData = {
-      ...voucher,
-      entitleCategories: voucher.entitleCategories.map(
-        (item) => item.categoryId
-      ),
-
-      entitleProducts: voucher.entitleProducts.map((item) => item.productId),
-      entitleVariants: voucher.entitleVariants.map((item) => item.variantId),
-    };
-
-    return formatData;
+  async findVoucher(title: string): Promise<VoucherResult | null> {
+    return this.queryService.findVoucher(title);
   }
 }
