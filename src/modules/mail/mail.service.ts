@@ -3,39 +3,45 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class MailService {
-  constructor(private mailerService: MailerService) {}
+  constructor(private readonly mailerService: MailerService) {}
 
-  async sendUserVerifyOTP(email: string, name: string, otp: string) {
+  async sendUserVerifyOTP(
+    email: string,
+    name: string,
+    otp: string
+  ): Promise<void> {
     await this.mailerService.sendMail({
       to: email,
       from: 'noreply <support@stylex.com>',
       subject: 'Xác thực đăng ký tài khoản',
       template: './otp-verify',
       context: {
-        name: name,
-        otp: otp,
+        name,
+        otp,
       },
     });
   }
 
-  async sendUserCheckoutComplete(
-    order: any,
+  async sendUserCheckoutComplete<TOrder extends object>(
+    order: TOrder,
     email: string,
     customerName: string
-  ) {
+  ): Promise<void> {
     await this.mailerService.sendMail({
       to: email,
       from: 'noreply <support@stylex.com>',
       subject: 'Tạo đơn hàng thành công',
       template: './checkout-order',
       context: {
-        customerName: customerName,
-        order: order,
+        customerName,
+        order,
       },
     });
   }
 
-  async sendUserDeliveryConfirmNotification(order: any) {
+  async sendUserDeliveryConfirmNotification<
+    TOrder extends { email: string; name: string },
+  >(order: TOrder): Promise<void> {
     await this.mailerService.sendMail({
       to: order.email,
       from: 'noreply <support@stylex.com>',
@@ -43,20 +49,24 @@ export class MailService {
       template: './delivery-notification',
       context: {
         customerName: order.name,
-        order: order,
+        order,
       },
     });
   }
 
-  async sendResetPasswordLink(to: string, name: string, resetLink: string) {
+  async sendResetPasswordLink(
+    to: string,
+    name: string,
+    resetLink: string
+  ): Promise<void> {
     await this.mailerService.sendMail({
-      to: to,
+      to,
       from: 'noreply <support@stylex.com>',
       subject: 'Yêu cầu đặt lại mật khẩu',
       template: './reset-password',
       context: {
-        name: name,
-        resetLink: resetLink,
+        name,
+        resetLink,
       },
     });
   }

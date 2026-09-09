@@ -34,6 +34,18 @@ $ npm install
 
 ## Running the app
 
+Create a local `.env` file before starting the server. Email delivery requires
+both variables below; the application will fail during startup when either is
+missing:
+
+```dotenv
+MAILER_USER=
+MAILER_PASSWORD=
+```
+
+Never commit SMTP credentials. Rotate a credential immediately if it has been
+committed or shared outside the deployment secret store.
+
 ```bash
 # development
 $ npm run start
