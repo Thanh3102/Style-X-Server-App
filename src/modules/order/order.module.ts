@@ -21,12 +21,7 @@ import { OrderTemporaryCreationService } from './services/order-temporary-creati
 import { OrderNotificationService } from './services/order-notification.service';
 
 @Module({
-  imports: [
-    ProductModule,
-    DiscountModule,
-    CartModule,
-    MailModule,
-  ],
+  imports: [ProductModule, DiscountModule, CartModule, MailModule],
   controllers: [OrderController],
   providers: [
     OrderCalculationService,

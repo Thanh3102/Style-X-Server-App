@@ -32,9 +32,6 @@ import { CartSyncService } from './services/cart-sync.service';
     CartStockPolicy,
     CartSyncService,
   ],
-  exports: [
-    CartService,
-    CartCheckoutService,
-  ],
+  exports: [CartService, CartCheckoutService],
 })
 export class CartModule {}

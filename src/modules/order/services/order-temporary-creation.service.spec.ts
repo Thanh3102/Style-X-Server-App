@@ -6,6 +6,10 @@ import { OrderCalculationService } from './order-calculation.service';
 import { OrderInventoryService } from './order-inventory.service';
 import { OrderTemporaryCreationService } from './order-temporary-creation.service';
 import { OrderPaymentService } from './order-payment.service';
+import { OrderCheckoutService } from './order-checkout.service';
+import { OrderCancellationService } from './order-cancellation.service';
+import { OrderFulfillmentService } from './order-fulfillment.service';
+import { OrderPayOsGatewayService } from './order-pay-os-gateway.service';
 
 const makeItem = (available = 2) => ({
   quantity: 2,
@@ -160,17 +164,22 @@ describe('OrderPaymentService.createTempOrder', () => {
     return { status, json };
   };
 
+  const makePaymentService = (
+    temporaryCreationService: Pick<OrderTemporaryCreationService, 'create'>
+  ) =>
+    new OrderPaymentService(
+      temporaryCreationService as OrderTemporaryCreationService,
+      {} as OrderCheckoutService,
+      {} as OrderCancellationService,
+      {} as OrderFulfillmentService,
+      {} as OrderPayOsGatewayService
+    );
+
   it('maps a temporary order result and customer actor id to the existing HTTP response', async () => {
     const create = jest
       .fn()
       .mockResolvedValue({ status: 200, body: { id: 'order-1' } });
-    const service = new (OrderPaymentService as any)(
-      { create } as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never
-    );
+    const service = makePaymentService({ create });
     const response = makeResponse();
 
     await service.createTempOrder(
@@ -188,15 +197,9 @@ describe('OrderPaymentService.createTempOrder', () => {
   });
 
   it('keeps the existing 500 response when temporary order creation throws', async () => {
-    const service = new (OrderPaymentService as any)(
-      {
-        create: jest.fn().mockRejectedValue(new Error('database down')),
-      } as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never
-    );
+    const service = makePaymentService({
+      create: jest.fn().mockRejectedValue(new Error('database down')),
+    });
     const response = makeResponse();
 
     await service.createTempOrder(

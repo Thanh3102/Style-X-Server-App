@@ -35,9 +35,6 @@ import { ProductCatalogCommandService } from './services/product-catalog-command
     ProductVariantQueryService,
     ProductCatalogCommandService,
   ],
-  exports: [
-    ProductQueryService,
-    ProductInventoryService,
-  ],
+  exports: [ProductQueryService, ProductInventoryService],
 })
 export class ProductModule {}
