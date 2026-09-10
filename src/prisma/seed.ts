@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { hashPlainText } from 'src/utils/helper/bcryptHelper';
-import { accounts } from './seed-data/account';
+import { resolveSeedAccounts } from './seed-config';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { collections } from './seed-data/collections';
 import { generateProduct } from './seed-data/product';
@@ -51,7 +51,7 @@ async function createAdminRole() {
 }
 
 async function createSystemAccount() {
-  for (const acc of accounts) {
+  for (const acc of resolveSeedAccounts()) {
     const hash = await hashPlainText(acc.password);
     const code = acc.code ?? (await generateCustomID('USER', 'employee'));
     await prisma.employee.create({
