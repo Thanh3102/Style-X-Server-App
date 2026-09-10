@@ -69,9 +69,6 @@ export type PaginationData = {
   limit: number;
 };
 
-/** @deprecated Use PaginationData. */
-export type PaginitionData = PaginationData;
-
 export type { AuthenticatedRequest, RequestActor } from './request.types';
 
 export enum DashboardPermission {

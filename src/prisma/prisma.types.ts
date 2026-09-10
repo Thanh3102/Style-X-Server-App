@@ -5,6 +5,3 @@ export type PrismaTransactionClient = Omit<
   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
 >;
-
-/** @deprecated Use PrismaTransactionClient. */
-export type PrismaTransactionObject = PrismaTransactionClient;

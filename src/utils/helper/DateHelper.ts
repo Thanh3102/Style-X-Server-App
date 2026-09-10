@@ -311,6 +311,3 @@ export const transformCreatedOnParams = (
 
   return { startDate, endDate };
 };
-
-/** @deprecated Use transformCreatedOnParams. */
-export const tranformCreatedOnParams = transformCreatedOnParams;
