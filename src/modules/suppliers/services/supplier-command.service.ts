@@ -37,7 +37,7 @@ export class SupplierCommandService {
         },
       });
 
-      const allSupplierTags = await this.prisma.tag.findMany({
+      const allSupplierTags = await p.tag.findMany({
         select: {
           id: true,
           name: true,
