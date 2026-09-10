@@ -1,4 +1,5 @@
-import { DateFilterOptionValue, FilterParam } from './query.types';
+import { DateFilterOptionValue } from './index';
+import { FilterParam } from './query.types';
 
 describe('query types', () => {
   it('preserves filter parameter values', () => {
