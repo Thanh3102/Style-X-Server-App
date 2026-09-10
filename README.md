@@ -46,6 +46,18 @@ MAILER_PASSWORD=
 Never commit SMTP credentials. Rotate a credential immediately if it has been
 committed or shared outside the deployment secret store.
 
+Prisma seed data creates the default `system` and `admin` accounts only when
+`NODE_ENV=development`. Supply separate local-only passwords before running
+`npx prisma db seed`; the seed has no password fallback:
+
+```dotenv
+NODE_ENV=development
+SEED_SYSTEM_PASSWORD=
+SEED_ADMIN_PASSWORD=
+```
+
+Never run the default-account seed against a production database.
+
 ```bash
 # development
 $ npm run start
