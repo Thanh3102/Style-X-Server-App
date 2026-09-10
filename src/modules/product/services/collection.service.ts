@@ -7,6 +7,27 @@ import { CreateCollectionDTO, UpdateCollectionDTO } from '../product';
 export class CollectionService {
   constructor(private prisma: PrismaService) {}
 
+  async getCollectionDetail(slug: string) {
+    return this.prisma.collection.findUnique({
+      where: {
+        slug,
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        categories: {
+          select: {
+            id: true,
+            slug: true,
+            image: true,
+            title: true,
+          },
+        },
+      },
+    });
+  }
+
   async getCollection(res: Response) {
     try {
       const collections = await this.prisma.collection.findMany({

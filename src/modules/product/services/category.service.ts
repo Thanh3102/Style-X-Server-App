@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { QueryParams } from 'src/utils/types';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { CreateCategoryDTO, UpdateCategoryDTO } from '../product';
 
@@ -10,6 +11,26 @@ export class CategoryService {
     private prisma: PrismaService,
     private cloudinary: CloudinaryService
   ) {}
+
+  async getCategories(queryParams: QueryParams) {
+    const where = queryParams.query
+      ? { title: { startsWith: queryParams.query } }
+      : {};
+
+    return this.prisma.category.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        image: true,
+        collection: true,
+      },
+      where,
+      orderBy: {
+        title: 'asc',
+      },
+    });
+  }
 
   async createCategory(dto: CreateCategoryDTO, req, res: Response) {
     try {
