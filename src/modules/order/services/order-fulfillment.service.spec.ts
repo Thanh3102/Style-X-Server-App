@@ -68,9 +68,10 @@ describe('OrderFulfillmentService', () => {
         }
       ),
     } as unknown as PrismaService;
+    let notificationObservedAfterTransaction = false;
     const mailService = {
       sendUserDeliveryConfirmNotification: jest.fn(async () => {
-        expect(transactionResolved).toBe(true);
+        notificationObservedAfterTransaction = transactionResolved;
         throw new Error('mail provider unavailable');
       }),
     } as unknown as MailService;
@@ -84,6 +85,7 @@ describe('OrderFulfillmentService', () => {
     expect(
       mailService.sendUserDeliveryConfirmNotification
     ).toHaveBeenCalledWith(deliveredOrder);
+    expect(notificationObservedAfterTransaction).toBe(true);
   });
 
   it('rejects delivery before inventory mutation when an order source has no inventory', async () => {

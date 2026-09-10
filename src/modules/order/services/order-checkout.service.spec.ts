@@ -57,9 +57,10 @@ describe('OrderCheckoutService', () => {
         }
       ),
     } as unknown as PrismaService;
+    let notificationObservedAfterTransaction = false;
     const mailService = {
       sendUserCheckoutComplete: jest.fn(async () => {
-        expect(transactionResolved).toBe(true);
+        notificationObservedAfterTransaction = transactionResolved;
         throw new Error('mail provider unavailable');
       }),
     } as unknown as MailService;
@@ -88,5 +89,6 @@ describe('OrderCheckoutService', () => {
       'buyer@example.com',
       'Buyer'
     );
+    expect(notificationObservedAfterTransaction).toBe(true);
   });
 });

@@ -12,9 +12,10 @@ describe('OrderPayOsGatewayService', () => {
       statusPersisted = true;
       return order;
     });
+    let notificationObservedAfterStatusPersistence = false;
     const mailService = {
       sendUserCheckoutComplete: jest.fn(async () => {
-        expect(statusPersisted).toBe(true);
+        notificationObservedAfterStatusPersistence = statusPersisted;
         throw new Error('mail provider unavailable');
       }),
     } as unknown as MailService;
@@ -40,5 +41,6 @@ describe('OrderPayOsGatewayService', () => {
       order.email,
       order.email
     );
+    expect(notificationObservedAfterStatusPersistence).toBe(true);
   });
 });
