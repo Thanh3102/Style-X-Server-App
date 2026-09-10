@@ -29,6 +29,11 @@ export class CartCheckoutService {
     type: 'Guest',
     ids: number[]
   ): ReturnType<CartGuestQueryService['getCartItemsData']>;
+  getCartItemsData(
+    prisma: PrismaTransactionClient,
+    type: CartCheckoutType,
+    ids: number[]
+  ): Promise<CartCheckoutItem[]>;
   async getCartItemsData(
     prisma: PrismaTransactionClient,
     type: CartCheckoutType,

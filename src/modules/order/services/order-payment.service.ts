@@ -1,17 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { OrderQueryService } from './order-query.service';
-import {
-  InventoryTransactionAction,
-  InventoryTransactionType,
-} from 'src/utils/types';
 import {
   CheckoutOrderDto,
   ConfirmPaymentReceivedDto,
   CreateTempOrderDto,
 } from '../order.dto';
-import { CartCustomerService } from 'src/modules/cart/services/cart-customer.service';
-import { CartGuestService } from 'src/modules/cart/services/cart-guest.service';
+import { CartCheckoutService } from 'src/modules/cart/services/cart-checkout.service';
 import { Response } from 'express';
 import { OrderCalculationService } from './order-calculation.service';
 import { OrderInventoryService } from './order-inventory.service';
@@ -24,43 +18,36 @@ import {
   OrderTransactionStatus,
   PayOsParams,
 } from '../order.type';
-import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
-import { MailService } from 'src/modules/mail/mail.service';
-import PayOS from '@payos/node';
-import { CheckoutRequestType } from '@payos/node/lib/type';
+import { OrderCancellationService } from './order-cancellation.service';
+import { OrderCheckoutService } from './order-checkout.service';
+import { OrderFulfillmentService } from './order-fulfillment.service';
+import { OrderPayOsGatewayService } from './order-pay-os-gateway.service';
 
 @Injectable()
 export class OrderPaymentService {
+  private readonly logger = new Logger(OrderPaymentService.name);
+
   constructor(
-    private prisma: PrismaService,
-    private orderQueryService: OrderQueryService,
-    private orderCalculatationService: OrderCalculationService,
-    private orderInventoryService: OrderInventoryService,
-    private customerCartService: CartCustomerService,
-    private guestCartService: CartGuestService,
-    private discountService: DiscountService,
-    private mailService: MailService
+    private readonly prisma: PrismaService,
+    private readonly orderCalculatationService: OrderCalculationService,
+    private readonly orderInventoryService: OrderInventoryService,
+    private readonly cartCheckoutService: CartCheckoutService,
+    private readonly discountService: DiscountService,
+    private readonly checkoutService: OrderCheckoutService,
+    private readonly cancellationService: OrderCancellationService,
+    private readonly fulfillmentService: OrderFulfillmentService,
+    private readonly payOsGateway: OrderPayOsGatewayService
   ) {}
 
   async createTempOrder(dto: CreateTempOrderDto, req, res: Response) {
     try {
       await this.prisma.$transaction(
         async (p) => {
-          let items = undefined;
-          switch (dto.type) {
-            case 'Customer':
-              items = await this.customerCartService.getCartItemsData(
-                p,
-                dto.cartItemIds
-              );
-              break;
-            case 'Guest':
-              items = await this.guestCartService.getCartItemsData(
-                p,
-                dto.cartItemIds
-              );
-              break;
-          }
+          const items = await this.cartCheckoutService.getCartItemsData(
+            p,
+            dto.type,
+            dto.cartItemIds
+          );
           let totalItemBeforeDiscount = 0; // Tổng sản phẩm trước giảm giá
           let totalItemAfterDiscount = 0; // Tổng sản phẩm sau giảm giá
           let totalItemDiscountAmount = 0; // Tổng giá trị giảm giá sản phẩm
@@ -361,8 +348,10 @@ export class OrderPaymentService {
           timeout: 15000,
         }
       );
-    } catch (error) {
-      console.log(error);
+    } catch (error: unknown) {
+      this.logger.error(
+        error instanceof Error ? (error.stack ?? error.message) : String(error)
+      );
 
       return res
         .status(500)
@@ -371,273 +360,42 @@ export class OrderPaymentService {
   }
 
   async cancelOrder(orderId: string) {
-    const order = await this.orderQueryService.getOrderDetail(orderId);
-
-    if (!order)
-      throw new Error('Không tìm thấy giao dịch hoặc giao dịch đã hủy');
-
-    await this.prisma.$transaction(
-      async (p) => {
-        // Hoàn lại tồn kho
-        for (const item of order.items) {
-          for (const i of item.sources) {
-            // Cập nhật lại tồn kho
-            const inventory = await p.inventory.findFirst({
-              where: {
-                variant_id: item.variant.id,
-                warehouse_id: i.warehouseId,
-              },
-            });
-            await p.inventory.update({
-              where: {
-                id: inventory.id,
-              },
-              data: {
-                avaiable: {
-                  increment: i.quantity,
-                },
-                onTransaction: {
-                  decrement: i.quantity,
-                },
-                histories: {
-                  create: {
-                    transactionAction:
-                      InventoryTransactionAction.DELETE_TEMP_ORDER,
-                    transactionType: InventoryTransactionType.ORDER,
-                    avaiableQuantityChange: i.quantity,
-                    onReceiveQuantityChange: i.quantity * -1,
-                    newAvaiable: inventory.avaiable + i.quantity,
-                    newOnTransaction: inventory.onTransaction - i.quantity,
-                  },
-                },
-              },
-            });
-            // Cập nhật lại đơn nhập (Nếu có)
-            if (i.receiveId) {
-              await p.receiveItem.updateMany({
-                where: {
-                  receiveId: i.receiveId,
-                  variantId: item.variantId,
-                },
-                data: {
-                  quantityAvaiable: {
-                    increment: i.quantity,
-                  },
-                },
-              });
-            }
-          }
-        }
-
-        // Cập nhật lại số lần sử dụng voucher của voucher (Chưa có)
-        if (order.applyVouchers.length > 0) {
-          for (const voucher of order.applyVouchers) {
-            await p.discount.update({
-              where: {
-                id: voucher.discountId,
-              },
-              data: {
-                usage: {
-                  decrement: 1,
-                },
-              },
-            });
-          }
-        }
-
-        await p.order.delete({
-          where: {
-            id: orderId,
-          },
-        });
-      },
-      {
-        maxWait: 30000,
-        timeout: 15000,
-      }
-    );
+    return this.cancellationService.cancelTemporaryOrder(orderId);
   }
 
   async requestCancelOrder(orderId: string, res: Response) {
     try {
       await this.cancelOrder(orderId);
       return res.status(200).json({ message: 'Đã hủy giao dịch' });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ message: error.message });
+    } catch (error: unknown) {
+      return res.status(500).json({
+        message: error instanceof Error ? error.message : 'Đã xảy ra lỗi',
+      });
     }
   }
 
   async checkoutOrder(dto: CheckoutOrderDto, res: Response) {
-    await this.prisma.$transaction(async (p) => {
-      const order = await p.order.findUnique({
-        where: {
-          id: dto.orderId,
-        },
-      });
-
-      if (!order)
-        return res.status(400).json({
-          message: 'Giao dịch không tồn tại. Vui lòng tạo hóa đơn khác',
-        });
-
-      if (Date.now() > Number(order.expire)) {
-        return res.status(400).json({
-          message: 'Giao dịch đã hết hạn. Vui lòng tạo hóa đơn khác',
-        });
-      }
-
-      const code = await generateCustomID('#', 'order', 'code', 6);
-
-      const updateOrder = await p.order.update({
-        where: {
-          id: dto.orderId,
-        },
-        data: {
-          code: code,
-          address: dto.address.trim(),
-          province: dto.province,
-          district: dto.district,
-          ward: dto.ward,
-          email: dto.email.trim(),
-          name: dto.name.trim(),
-          phoneNumber: dto.phoneNumber.trim(),
-          paymentMethod: dto.paymentMethod,
-          note: dto.note ? dto.note.trim() : undefined,
-          receiverPhoneNumber: dto.receivePhoneNumber
-            ? dto.receivePhoneNumber.trim()
-            : undefined,
-          receiverName: dto.receiveName ? dto.receiveName.trim() : undefined,
-          customerId: dto.customerId ? dto.customerId : undefined,
-          status: OrderStatus.PENDING_PROCESSING,
-        },
-        include: {
-          items: {
-            select: {
-              quantity: true,
-              priceAfterDiscount: true,
-              totalPriceAfterDiscount: true,
-              product: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      this.mailService.sendUserCheckoutComplete(
-        updateOrder,
-        dto.email,
-        dto.name
-      );
-    });
-
-    return res.status(200).json({ message: 'Tạo đơn hàng thành công.' });
+    const result = await this.checkoutService.checkout(dto);
+    return res.status(result.status).json(result.body);
   }
 
   async createPaymentLinkWithPayOS(dto: CheckoutOrderDto, res: Response) {
     try {
-      const order = await this.prisma.order.findUnique({
-        where: {
-          id: dto.orderId,
-        },
-      });
-
-      if (!order)
-        return res.status(400).json({
-          message: 'Giao dịch không tồn tại. Vui lòng tạo hóa đơn khác',
-        });
-
-      if (Date.now() > Number(order.expire)) {
-        return res.status(400).json({
-          message: 'Giao dịch đã hết hạn. Vui lòng tạo hóa đơn khác',
-        });
-      }
-
-      const payOS = new PayOS(
-        process.env.PAYOS_CLIENT_ID,
-        process.env.PAYOS_API_KEY,
-        process.env.PAYOS_CHECKSUM_KEY
-      );
-
-      const orderCode = Date.now();
-      const code = await generateCustomID('#', 'order', 'code', 6);
-
-      await this.prisma.order.update({
-        where: {
-          id: order.id,
-        },
-        data: {
-          code: code,
-          address: dto.address.trim(),
-          province: dto.province,
-          district: dto.district,
-          ward: dto.ward,
-          email: dto.email,
-          name: dto.name,
-          paymentMethod: dto.paymentMethod,
-          note: dto.note.trim(),
-          receiverPhoneNumber: dto.receivePhoneNumber.trim(),
-          receiverName: dto.receiveName.trim(),
-          phoneNumber: dto.phoneNumber.trim(),
-          customerId: dto.customerId ? dto.customerId : undefined,
-          status: OrderStatus.PENDING_PROCESSING,
-          payOSCode: orderCode.toString(),
-        },
-      });
-
-      const checkoutRequest: CheckoutRequestType = {
-        orderCode: orderCode,
-        amount: order.totalOrderAfterDiscount,
-        description: `Thanh toan don hang`,
-        cancelUrl: `${process.env.SERVER_BASE_URL}/api/order/cancel/pay-os?order=${order.id}`,
-        returnUrl: `${process.env.SERVER_BASE_URL}/api/order/success/pay-os?order=${order.id}`,
-        buyerName: dto.name.trim(),
-        buyerEmail: dto.email.trim(),
-        buyerPhone: dto.phoneNumber.trim(),
-        buyerAddress: `${[dto.address, dto.ward, dto.district, dto.province].join(', ')}`,
-        expiredAt: Math.round(Number(order.expire) / 1000),
-      };
-
-      const response = await payOS.createPaymentLink(checkoutRequest);
-
-      return res.status(200).json({ checkoutUrl: response.checkoutUrl });
-    } catch (error) {
-      console.log(error);
+      const result = await this.payOsGateway.createPaymentLink(dto);
+      return res.status(result.status).json(result.body);
+    } catch (error: unknown) {
       return res.status(500).json({ message: 'Đã xảy ra lỗi' });
     }
   }
 
   async cancelPayOSPayment(query: PayOsParams, res: Response) {
-    await this.prisma.order.update({
-      where: {
-        id: query.order,
-      },
-      data: {
-        payOSCode: null,
-      },
-    });
-
-    return res.redirect(
-      `${process.env.CLIENT_BASE_URL}/checkout?order=${query.order}`
-    );
+    await this.payOsGateway.clearPaymentCode(query.order);
+    return res.redirect(this.payOsGateway.cancelRedirect(query));
   }
 
   async successPayOSPayment(query: PayOsParams, res: Response) {
-    const order = await this.prisma.order.update({
-      where: {
-        id: query.order,
-      },
-      data: {
-        transactionStatus: OrderTransactionStatus.PAID,
-      },
-    });
-
-    this.mailService.sendUserCheckoutComplete(order, order.email, order.email);
-
-    return res.redirect(`${process.env.CLIENT_BASE_URL}/checkout/success`);
+    await this.payOsGateway.markPaymentSucceeded(query.order);
+    return res.redirect(this.payOsGateway.successRedirect());
   }
 
   async cancelOrderByAdmin(
@@ -650,122 +408,12 @@ export class OrderPaymentService {
     res: Response
   ) {
     try {
-      const { isReStock, orderId, reason } = dto;
-      await this.prisma.$transaction(
-        async (p) => {
-          const order = await p.order.update({
-            where: {
-              id: orderId,
-            },
-            data: {
-              status: OrderStatus.CANCEL,
-              history: {
-                create: {
-                  action: OrderHistoryAction.CANCEL,
-                  type: OrderHistoryType.ADJUSTMENT,
-                  changedUserId: req.user.id,
-                  reason: reason.trim(),
-                },
-              },
-            },
-            select: {
-              status: true,
-              items: {
-                select: {
-                  id: true,
-                  variantId: true,
-                  sources: {
-                    select: {
-                      receiveId: true,
-                      warehouseId: true,
-                      quantity: true,
-                    },
-                  },
-                },
-              },
-            },
-          });
-
-          for (const item of order.items) {
-            for (const source of item.sources) {
-              // Lấy kho hàng
-              const inventory = await p.inventory.findFirst({
-                where: {
-                  variant_id: item.variantId,
-                  warehouse_id: source.warehouseId,
-                },
-              });
-
-              // Cập nhật số lượng và lưu lịch sử kho hàng, đơn nhập
-              if (source.receiveId && isReStock) {
-                await p.receiveItem.updateMany({
-                  where: {
-                    receiveId: source.receiveId,
-                    variantId: item.variantId,
-                  },
-                  data: {
-                    quantityAvaiable: {
-                      increment: source.quantity,
-                    },
-                  },
-                });
-              }
-
-              await p.inventory.update({
-                where: {
-                  id: inventory.id,
-                },
-                data: {
-                  avaiable: {
-                    increment: isReStock ? source.quantity : 0,
-                  },
-                  onTransaction: {
-                    decrement: source.quantity,
-                  },
-                  onHand: {
-                    increment:
-                      order.status === OrderStatus.IN_TRANSIT && isReStock
-                        ? source.quantity
-                        : 0,
-                  },
-                  histories: {
-                    create: {
-                      transactionAction:
-                        InventoryTransactionAction.CANCEL_ORDER,
-                      transactionType: InventoryTransactionType.ORDER,
-                      newAvaiable: isReStock
-                        ? inventory.avaiable + source.quantity
-                        : inventory.avaiable,
-                      newOnTransaction:
-                        inventory.onTransaction - source.quantity,
-                      newOnHand:
-                        order.status === OrderStatus.IN_TRANSIT && isReStock
-                          ? inventory.onHand + source.quantity
-                          : inventory.onHand,
-                      avaiableQuantityChange: isReStock ? source.quantity : 0,
-                      OnTransactionQuantityChange: source.quantity * -1,
-                      onHandQuantityChange:
-                        order.status === OrderStatus.IN_TRANSIT
-                          ? source.quantity
-                          : 0,
-                      changeUserId: req.user.id,
-                      orderId: orderId,
-                    },
-                  },
-                },
-              });
-            }
-          }
-        },
-        {
-          maxWait: 20000,
-          timeout: 20000,
-        }
-      );
+      await this.cancellationService.cancelByAdmin(dto, Number(req.user.id));
       return res.status(200).json({ message: 'Đã hủy đơn hàng' });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ message: error.message });
+    } catch (error: unknown) {
+      return res.status(500).json({
+        message: error instanceof Error ? error.message : 'Đã xảy ra lỗi',
+      });
     }
   }
 
@@ -775,76 +423,19 @@ export class OrderPaymentService {
     res: Response
   ) {
     try {
-      await this.prisma.$transaction(
-        async (p) => {
-          // Cập nhật trạng thái đơn hàng
-          const order = await p.order.update({
-            where: {
-              id: dto.orderId,
-            },
-            data: {
-              status: OrderStatus.COMPLETE,
-              transactionStatus: OrderTransactionStatus.PAID,
-              history: {
-                create: {
-                  action: OrderHistoryAction.CONFIRM_PAYMENT,
-                  type: OrderHistoryType.ADJUSTMENT,
-                  changedUserId: req.user.id,
-                },
-              },
-            },
-            select: {
-              id: true,
-              items: {
-                select: {
-                  sources: true,
-                  variantId: true,
-                },
-              },
-            },
-          });
-
-          // Cập nhật số lượng giao dịch (Do đã hoàn thành giao dịch)
-          for (const item of order.items) {
-            for (const source of item.sources) {
-              const inventory = await p.inventory.findFirst({
-                where: {
-                  variant_id: item.variantId,
-                  warehouse_id: source.warehouseId,
-                },
-              });
-
-              await p.inventory.update({
-                where: {
-                  id: inventory.id,
-                },
-                data: {
-                  onTransaction: { decrement: source.quantity },
-                  histories: {
-                    create: {
-                      transactionAction:
-                        InventoryTransactionAction.DELIVERY_COMPLETE,
-                      transactionType: InventoryTransactionType.ORDER,
-                      OnTransactionQuantityChange: source.quantity * -1,
-                      newOnTransaction:
-                        inventory.onTransaction * source.quantity,
-                      changeUserId: req.user.id,
-                      orderId: order.id,
-                    },
-                  },
-                },
-              });
-            }
-          }
-        },
-        { maxWait: 20000, timeout: 20000 }
+      await this.fulfillmentService.confirmPaymentReceived(
+        dto.orderId,
+        Number(req.user.id)
       );
       return res.status(200).json({ message: 'Đã cập nhật đơn hàng' });
-    } catch (error) {
-      console.log(error);
+    } catch (error: unknown) {
       return res
         .status(500)
-        .json(error.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại');
+        .json(
+          error instanceof Error
+            ? error.message
+            : 'Đã có lỗi xảy ra. Vui lòng thử lại'
+        );
     }
   }
 }

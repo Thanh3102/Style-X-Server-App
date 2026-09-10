@@ -1,144 +1,38 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrderQueryService } from '../services/order-query.service';
 import { DiscountService } from 'src/modules/discount/discount.service';
 import { PrismaTransactionClient } from 'src/prisma/prisma.types';
-import {
-  FormatOrderDetail,
-  OrderDetail,
-  OrderHistoryAction,
-  OrderHistoryType,
-  OrderStatus,
-  OrderTransactionStatus,
-} from '../order.type';
+import { OrderDetail } from '../order.type';
 import { Voucher } from 'src/modules/discount/discount.type';
 import { ProductQueryService } from 'src/modules/product/services/product-query.service';
 import { Response } from 'express';
-import {
-  InventoryTransactionAction,
-  InventoryTransactionType,
-} from 'src/utils/types';
-import { MailService } from 'src/modules/mail/mail.service';
+import { OrderCancellationService } from './order-cancellation.service';
+import { OrderFulfillmentService } from './order-fulfillment.service';
+import { OrderResponseMapper } from './order-response-mapper.service';
+import { OrderVoucherPolicyService } from './order-voucher-policy.service';
 
 @Injectable()
 export class OrderCommandService {
+  private readonly logger = new Logger(OrderCommandService.name);
+
   constructor(
-    private prisma: PrismaService,
-    private orderQueryService: OrderQueryService,
-    private discountService: DiscountService,
-    private productQueryService: ProductQueryService,
-    private mailService: MailService
+    private readonly prisma: PrismaService,
+    private readonly orderQueryService: OrderQueryService,
+    private readonly discountService: DiscountService,
+    private readonly productQueryService: ProductQueryService,
+    private readonly voucherPolicy: OrderVoucherPolicyService,
+    private readonly cancellationService: OrderCancellationService,
+    private readonly fulfillmentService: OrderFulfillmentService,
+    private readonly responseMapper: OrderResponseMapper
   ) {}
 
   async checkVoucherCondition(
     p: PrismaTransactionClient,
     order: OrderDetail,
     voucher: Voucher
-  ) {
-    // Kiểm tra thời gian sử dụng
-    if (
-      voucher.startOn > new Date() ||
-      (voucher.endOn && voucher.endOn < new Date())
-    ) {
-      throw new Error('Mã giảm giá không trong thời gian áp dụng');
-    }
-
-    // Kiểm tra đơn hàng đã dùng voucher này chưa
-    const existVoucher = await p.orderApplyVoucher.findFirst({
-      where: {
-        discountId: voucher.id,
-        orderId: order.id,
-      },
-    });
-
-    if (existVoucher) throw new Error('Mã giảm giá đã được sử dụng');
-
-    // Kiểm tra nếu voucher giới hạn sử dụng
-    if (voucher.usageLimit && voucher.usage === voucher.usageLimit) {
-      throw new Error('Mã giảm giá tới giới hạn sử dụng');
-    }
-
-    // Kiểm tra nếu voucher giới hạn mỗi khách hàng một lần
-    if (voucher.onePerCustomer) {
-      // Nếu là khách vãng lại sẽ không thể sử dụng
-      if (order.userType === 'Guest') {
-        throw new Error('Mã giảm giá chỉ áp dụng cho tài khoản thành viên');
-      }
-
-      // Nếu voucher này đã được khách hàng sử dụng
-      const orderApplyVoucher = await p.orderApplyVoucher.findFirst({
-        where: {
-          discountId: voucher.id,
-          order: {
-            customerId: order.customerId,
-          },
-        },
-      });
-      if (orderApplyVoucher)
-        throw new Error('Mã giảm giá này chỉ sử dụng 1 lần');
-    }
-
-    // Kiểm tra kết hợp giảm giá
-    // Nếu không áp dụng với giảm giá đơn hàng khác
-    if (!voucher.combinesWithOrderDiscount) {
-      // Nếu đơn hàng đã áp dụng giảm giá đơn hàng -> Báo lỗi
-      if (order.applyDiscounts.length > 0) {
-        throw new Error(
-          'Mã giảm giá không áp dụng chung với khuyến mại đơn hàng khác'
-        );
-      }
-    }
-
-    // Nếu không áp dụng với giảm giá sản phẩm khác
-    if (!voucher.combinesWithProductDiscount) {
-      // Nếu áp dụng cho tất cả sản phẩm -> Kiểm tra từng sản phẩm đã có khuyến mại nào chưa
-      if (voucher.entitle === 'all') {
-        // Danh sách sản phẩm đã áp dụng khuyến mại khác
-        const applyDiscountItem = order.items.filter(
-          (item) => item.applyDiscounts.length > 0
-        );
-
-        if (applyDiscountItem.length > 0) {
-          throw new Error(
-            'Mã giảm giá không áp dụng chung với khuyến mại sản phẩm khác'
-          );
-        }
-      }
-
-      if (voucher.entitle === 'entitledProduct') {
-        for (const item of order.items) {
-          // Nếu sản phẩm mà mã giảm giá áp dụng đã áp dụng khuyến mại khác
-          if (
-            item.applyDiscounts.length > 0 &&
-            voucher.entitleVariants.includes(item.variantId)
-          ) {
-            throw new Error(
-              "'Mã giảm giá không áp dụng chung với khuyến mại sản phẩm khác'"
-            );
-          }
-        }
-      }
-
-      if (voucher.entitle === 'entitledCategory') {
-        const entitledVariantIds =
-          await this.productQueryService.findVariantIdByCategoryId(
-            voucher.entitleCategories
-          );
-        for (const item of order.items) {
-          // Nếu sản phẩm mà mã giảm giá áp dụng đã áp dụng khuyến mại khác
-          if (
-            item.applyDiscounts.length > 0 &&
-            entitledVariantIds.includes(item.variantId)
-          ) {
-            throw new Error(
-              "'Mã giảm giá không áp dụng chung với khuyến mại sản phẩm khác'"
-            );
-          }
-        }
-      }
-    }
-
-    return true;
+  ): Promise<true> {
+    return this.voucherPolicy.assertCanApply(p, order, voucher);
   }
 
   async handleApplyProductVoucher(
@@ -476,8 +370,6 @@ export class OrderCommandService {
     const newTotalOrderDiscountAmount =
       order.totalOrderDiscountAmount + discountValue;
 
-    console.log('discount amount', discountValue);
-
     // Update lại tổng giá trị đơn hàng
     await p.order.update({
       where: {
@@ -535,9 +427,7 @@ export class OrderCommandService {
           if (!voucher) throw new Error('Mã giảm giá không tồn tại');
 
           // Kiểm tra có thể sử dụng voucher
-          await this.checkVoucherCondition(p, orderDetail, voucher);
-
-          console.log('Voucher', voucher);
+          await this.voucherPolicy.assertCanApply(p, orderDetail, voucher);
 
           if (voucher.type === 'product') {
             await this.handleApplyProductVoucher(p, orderDetail, voucher);
@@ -556,37 +446,27 @@ export class OrderCommandService {
       return res
         .status(200)
         .json({ message: 'Sử dụng mã giảm giá thành công' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      this.logError(error);
+      return res.status(500).json({
+        message: error instanceof Error ? error.message : 'Đã xảy ra lỗi',
+      });
     }
   }
 
   async deleteOrder(orderId: string, req, res: Response) {
     try {
-      await this.prisma.order.update({
-        where: {
-          id: orderId,
-        },
-        data: {
-          void: true,
-          history: {
-            create: {
-              action: OrderHistoryAction.DELETE,
-              type: OrderHistoryType.ADJUSTMENT,
-              changedUserId: req.user.id,
-            },
-          },
-        },
-      });
+      await this.cancellationService.deleteOrder(orderId, Number(req.user.id));
       return res.status(200).json({ message: 'Đã xóa đơn hàng' });
-    } catch (error) {
-      console.log(error);
+    } catch (error: unknown) {
+      this.logError(error);
       return res
         .status(500)
-        .json(error.message ?? 'Đã có lỗi xảy ra. Vui lòng thử lại');
+        .json(
+          error instanceof Error
+            ? error.message
+            : 'Đã có lỗi xảy ra. Vui lòng thử lại'
+        );
     }
   }
 
@@ -597,98 +477,17 @@ export class OrderCommandService {
     res: Response
   ) {
     try {
-      await this.prisma.$transaction(async (p) => {
-        const { transactionStatus } = await p.order.findUnique({
-          where: {
-            id: orderId,
-          },
-          select: {
-            transactionStatus: true,
-          },
-        });
-
-        const order = await p.order.update({
-          where: {
-            id: orderId,
-          },
-          data: {
-            status:
-              transactionStatus === OrderTransactionStatus.PAID
-                ? OrderStatus.COMPLETE
-                : OrderStatus.IN_TRANSIT,
-            history: {
-              create: {
-                action: OrderHistoryAction.CONFIRM_SHIPPING,
-                type: OrderHistoryType.ADJUSTMENT,
-                changedUserId: req.user.id,
-              },
-            },
-          },
-          select: {
-            code: true,
-            name: true,
-            email: true,
-            province: true,
-            district: true,
-            ward: true,
-            address: true,
-            items: {
-              select: {
-                product: {
-                  select: {
-                    name: true,
-                  },
-                },
-                priceAfterDiscount: true,
-                quantity: true,
-                totalPriceAfterDiscount: true,
-                sources: true,
-                variantId: true,
-              },
-            },
-          },
-        });
-
-        // Cập nhật tồn kho (Do đã chuyển hàng khỏi kho)
-        for (const item of order.items) {
-          for (const source of item.sources) {
-            const inventory = await p.inventory.findFirst({
-              where: {
-                variant_id: item.variantId,
-                warehouse_id: source.warehouseId,
-              },
-            });
-
-            await p.inventory.update({
-              where: {
-                id: inventory.id,
-              },
-              data: {
-                onHand: { decrement: source.quantity },
-                histories: {
-                  create: {
-                    transactionAction: InventoryTransactionAction.DELIVERY,
-                    transactionType: InventoryTransactionType.ORDER,
-                    onHandQuantityChange: source.quantity * -1,
-                    newOnHand: inventory.onHand * source.quantity,
-                    changeUserId: req.user.id,
-                    orderId: orderId,
-                  },
-                },
-              },
-            });
-          }
-        }
-
-        if (isSendEmail) {
-          this.mailService.sendUserDeliveryConfirmNotification(order);
-        }
-      });
-
+      await this.fulfillmentService.confirmDelivery(
+        orderId,
+        isSendEmail,
+        Number(req.user.id)
+      );
       return res.status(200).json({ message: 'Đã cập nhật đơn hàng' });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ message: error.message });
+    } catch (error: unknown) {
+      this.logError(error);
+      return res.status(500).json({
+        message: error instanceof Error ? error.message : 'Đã xảy ra lỗi',
+      });
     }
   }
 
@@ -696,56 +495,20 @@ export class OrderCommandService {
     try {
       const order = await this.orderQueryService.getOrderDetail(orderId);
 
-      const formatOrderData: FormatOrderDetail = {
-        id: order.id,
-        void: order.void,
-        code: order.code,
-        createdAt: order.createdAt,
-        totalItemBeforeDiscount: order.totalItemBeforeDiscount,
-        totalItemAfterDiscount: order.totalItemAfterDiscount,
-        totalItemDiscountAmount: order.totalItemDiscountAmount,
-        totalOrderDiscountAmount: order.totalOrderDiscountAmount,
-        totalOrderBeforeDiscount: order.totalOrderBeforeDiscount,
-        totalOrderAfterDiscount: order.totalOrderAfterDiscount,
-        userType: order.userType,
-        status: order.status,
-        transactionStatus: order.transactionStatus,
-        paymentMethod: order.paymentMethod,
-        email: order.email,
-        name: order.name,
-        phoneNumber: order.phoneNumber,
-        province: order.province,
-        district: order.district,
-        ward: order.ward,
-        address: order.address,
-        note: order.note,
-        receiverName: order.receiverName,
-        receiverPhoneNumber: order.receiverPhoneNumber,
-        items: order.items.map((item) => ({
-          ...item,
-          applyDiscounts: item.applyDiscounts.map((item) => ({
-            id: item.discount.id,
-            title: item.discount.title,
-            description: item.discount.description,
-            discountAmount: item.discountAmount,
-          })),
-        })),
-        applyDiscounts: order.applyDiscounts.map((item) => ({
-          id: item.id,
-          title: item.discount.title,
-          description: item.discount.description,
-          discountAmount: item.discountAmount,
-        })),
-        histories: order.history,
-        customer: order.customer,
-      };
+      const formatOrderData = this.responseMapper.toDetailResponse(order);
 
       return res.status(200).json(formatOrderData);
-    } catch (error) {
-      console.log(error);
+    } catch (error: unknown) {
+      this.logError(error);
       return res.status(500).json({
         message: 'Đã xảy ra lỗi',
       });
     }
+  }
+
+  private logError(error: unknown): void {
+    this.logger.error(
+      error instanceof Error ? (error.stack ?? error.message) : String(error)
+    );
   }
 }

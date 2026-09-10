@@ -1,7 +1,9 @@
-import { PaginationData } from 'src/utils/types';
-import { CartCustomerService } from '../cart/services/cart-customer.service';
-import { CartGuestService } from '../cart/services/cart-guest.service';
-import { OrderQueryService } from './services/order-query.service';
+import type { PaginationData } from 'src/utils/types';
+import type {
+  CustomerCartCheckoutItem,
+  GuestCartCheckoutItem,
+} from '../cart/services/cart-checkout.service';
+import type { OrderQueryService } from './services/order-query.service';
 
 export enum OrderStatus {
   CANCEL = 'Đã hủy',
@@ -52,13 +54,9 @@ export type CheckoutOrderDto = {
   customerId?: string;
 };
 
-export type CustomerCartItem = Awaited<
-  ReturnType<typeof CartCustomerService.prototype.getCartItemsData>
->[0];
+export type CustomerCartItem = CustomerCartCheckoutItem;
 
-export type GuestCartItem = Awaited<
-  ReturnType<typeof CartGuestService.prototype.getCartItemsData>
->[0];
+export type GuestCartItem = GuestCartCheckoutItem;
 
 export type CartItem = CustomerCartItem | GuestCartItem;
 

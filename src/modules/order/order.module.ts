@@ -12,6 +12,12 @@ import { OrderCronService } from './services/order-cron.service';
 import { OrderInventoryService } from './services/order-inventory.service';
 import { OrderPaymentService } from './services/order-payment.service';
 import { OrderQueryService } from './services/order-query.service';
+import { OrderCancellationService } from './services/order-cancellation.service';
+import { OrderCheckoutService } from './services/order-checkout.service';
+import { OrderFulfillmentService } from './services/order-fulfillment.service';
+import { OrderPayOsGatewayService } from './services/order-pay-os-gateway.service';
+import { OrderResponseMapper } from './services/order-response-mapper.service';
+import { OrderVoucherPolicyService } from './services/order-voucher-policy.service';
 
 @Module({
   imports: [
@@ -30,6 +36,12 @@ import { OrderQueryService } from './services/order-query.service';
     OrderInventoryService,
     OrderPaymentService,
     OrderQueryService,
+    OrderCancellationService,
+    OrderCheckoutService,
+    OrderFulfillmentService,
+    OrderPayOsGatewayService,
+    OrderResponseMapper,
+    OrderVoucherPolicyService,
   ],
   exports: [],
 })
