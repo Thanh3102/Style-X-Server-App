@@ -3,8 +3,8 @@ import { Cron } from '@nestjs/schedule';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
-export class CartCronService {
-  constructor(private prisma: PrismaService) {}
+export class CartExpirationService {
+  constructor(private readonly prisma: PrismaService) {}
 
   @Cron('0 0 0 * * *', {
     name: 'deleteExpireGuestCart',
@@ -12,8 +12,8 @@ export class CartCronService {
   })
   async deleteExpireGuestCart(): Promise<void> {
     await this.prisma.$transaction(
-      async (p) => {
-        await p.guestCartItem.deleteMany({
+      async (transaction) => {
+        await transaction.guestCartItem.deleteMany({
           where: {
             cart: {
               expires: {
@@ -23,7 +23,7 @@ export class CartCronService {
           },
         });
 
-        await p.guestCart.deleteMany({
+        await transaction.guestCart.deleteMany({
           where: {
             expires: {
               lt: new Date(),
