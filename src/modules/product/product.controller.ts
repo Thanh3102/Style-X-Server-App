@@ -38,8 +38,7 @@ import { Permissions } from 'src/decorators/permission.decorator';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { ProductQueryService } from './services/product-query.service';
 import { ProductCommandService } from './services/product-command.service';
-import { CategoryService } from './services/category.service';
-import { CollectionService } from './services/collection.service';
+import { ProductCatalogCommandService } from './services/product-catalog-command.service';
 
 @UseGuards(JwtGuard, PermissionsGuard)
 @UseInterceptors(LoggerInterceptor)
@@ -48,8 +47,7 @@ export class ProductController {
   constructor(
     private productQueryService: ProductQueryService,
     private productCommandService: ProductCommandService,
-    private categoryService: CategoryService,
-    private collectionService: CollectionService
+    private productCatalogCommandService: ProductCatalogCommandService
   ) {}
 
   @Public()
@@ -67,7 +65,7 @@ export class ProductController {
   @Public()
   @Get('/collection')
   getCollection(@Res() res: Response) {
-    return this.collectionService.getCollection(res);
+    return this.productQueryService.getCollections(res);
   }
 
   @Public()
@@ -104,15 +102,13 @@ export class ProductController {
   createCategories(
     @UploadedFile() image: Express.Multer.File,
     @Body() dto: CreateCategoryDTO,
-    @Req() req,
     @Res() res: Response
   ) {
-    return this.categoryService.createCategory(
+    return this.productCatalogCommandService.createCategory(
       {
         ...dto,
         image,
       },
-      req,
       res
     );
   }
@@ -123,42 +119,39 @@ export class ProductController {
   updateCategory(
     @UploadedFile() image: Express.Multer.File,
     @Body() dto: UpdateCategoryDTO,
-    @Req() req,
     @Res() res: Response
   ) {
-    return this.categoryService.updateCategory({ ...dto, image }, req, res);
+    return this.productCatalogCommandService.updateCategory(
+      { ...dto, image },
+      res
+    );
   }
 
   @Delete('/category/:id')
   @Permissions(CategoryPermission.Delete)
   deleteCategory(@Param('id') id: string, @Res() res: Response) {
-    return this.categoryService.deleteCategory(parseInt(id), res);
+    return this.productCatalogCommandService.deleteCategory(parseInt(id), res);
   }
 
   @Post('/collection')
   @Permissions(CategoryPermission.Create)
-  createCollection(
-    @Body() dto: CreateCollectionDTO,
-    @Req() req,
-    @Res() res: Response
-  ) {
-    return this.collectionService.createCollection(dto, req, res);
+  createCollection(@Body() dto: CreateCollectionDTO, @Res() res: Response) {
+    return this.productCatalogCommandService.createCollection(dto, res);
   }
 
   @Put('/collection')
   @Permissions(CategoryPermission.Update)
-  updateCollection(
-    @Body() dto: UpdateCategoryDTO,
-    @Req() req,
-    @Res() res: Response
-  ) {
-    return this.collectionService.updateCollection(dto, req, res);
+  updateCollection(@Body() dto: UpdateCategoryDTO, @Res() res: Response) {
+    return this.productCatalogCommandService.updateCollection(dto, res);
   }
 
   @Delete('/collection/:id')
   @Permissions(CategoryPermission.Delete)
   deleteCollection(@Param('id') id: string, @Res() res: Response) {
-    return this.collectionService.deleteCollection(parseInt(id), res);
+    return this.productCatalogCommandService.deleteCollection(
+      parseInt(id),
+      res
+    );
   }
 
   @Put('/images/updateMainImage')

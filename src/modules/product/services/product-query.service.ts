@@ -125,6 +125,16 @@ export class ProductQueryService {
     return this.categoryService.getCategories(queryParams);
   }
 
+  async getCollections(res: Response): Promise<Response> {
+    try {
+      const collections = await this.collectionService.getCollections();
+      return res.status(200).json(collections);
+    } catch (error: unknown) {
+      this.logError(error);
+      return res.status(500).json({ message: 'Đã xảy ra lỗi' });
+    }
+  }
+
   getCollectionDetail(slug: string, res: Response) {
     return this.collectionService
       .getCollectionDetail(slug)

@@ -15,6 +15,7 @@ import { ProductMediaService } from './services/product-media.service';
 import { ProductMutationService } from './services/product-mutation.service';
 import { ProductPublicQueryService } from './services/product-public-query.service';
 import { ProductVariantQueryService } from './services/product-variant-query.service';
+import { ProductCatalogCommandService } from './services/product-catalog-command.service';
 
 @Module({
   imports: [CloudinaryModule, InventoriesModule, DiscountModule],
@@ -32,6 +33,7 @@ import { ProductVariantQueryService } from './services/product-variant-query.ser
     ProductMutationService,
     ProductPublicQueryService,
     ProductVariantQueryService,
+    ProductCatalogCommandService,
   ],
   exports: [
     ProductQueryService,
