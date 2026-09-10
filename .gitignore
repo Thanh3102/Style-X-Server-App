@@ -43,6 +43,7 @@ Dockerfile
 # AI Agents
 .agents
 AGENTS.md
+PLAN.md
 
 # Git worktrees
 .worktrees/
