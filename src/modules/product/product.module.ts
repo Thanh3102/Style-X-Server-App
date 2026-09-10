@@ -37,7 +37,6 @@ import { ProductCatalogCommandService } from './services/product-catalog-command
   ],
   exports: [
     ProductQueryService,
-    ProductCommandService,
     ProductInventoryService,
   ],
 })

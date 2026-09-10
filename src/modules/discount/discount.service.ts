@@ -11,7 +11,6 @@ import type {
   ActiveDiscount,
   CreateDiscountDTO,
   UpdateDiscountDTO,
-  Voucher,
 } from './discount.type';
 import type {
   ActiveDiscountOptions,
@@ -180,5 +179,3 @@ export class DiscountService {
     this.logger.error(getErrorMessage(error), getErrorStack(error));
   }
 }
-
-export type { Voucher };
