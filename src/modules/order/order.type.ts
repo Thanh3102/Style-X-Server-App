@@ -37,6 +37,10 @@ export type CreateTempOrderDto = {
   cartItemIds: number[];
 };
 
+export type TemporaryOrderResult =
+  | { status: 200; body: { id: string } }
+  | { status: 400; body: { message: string } };
+
 export type CheckoutOrderDto = {
   orderId: string;
   name: string;

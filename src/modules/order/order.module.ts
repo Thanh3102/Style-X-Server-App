@@ -19,6 +19,7 @@ import { OrderPayOsGatewayService } from './services/order-pay-os-gateway.servic
 import { OrderResponseMapper } from './services/order-response-mapper.service';
 import { OrderVoucherPolicyService } from './services/order-voucher-policy.service';
 import { OrderVoucherApplicationService } from './services/order-voucher-application.service';
+import { OrderTemporaryCreationService } from './services/order-temporary-creation.service';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { OrderVoucherApplicationService } from './services/order-voucher-applica
     OrderResponseMapper,
     OrderVoucherPolicyService,
     OrderVoucherApplicationService,
+    OrderTemporaryCreationService,
   ],
   exports: [],
 })
