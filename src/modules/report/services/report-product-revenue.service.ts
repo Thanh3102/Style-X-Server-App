@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { ReportProductRevenueDetailResponse } from '../report.type';
 import { ReportCalculationService } from './report-calculation.service';
 import { ReportDateRangeService } from './report-date-range.service';

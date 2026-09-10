@@ -7,7 +7,7 @@ import { generateProduct } from './seed-data/product';
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
-} from 'src/utils/types';
+} from 'src/utils/types/inventory.types';
 import { permissionSections } from './seed-data/permission';
 
 const prisma = new PrismaClient();

@@ -9,7 +9,7 @@ import {
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { TagsService } from './tags.service';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { Response } from 'express';
 
 @UseGuards(JwtGuard)

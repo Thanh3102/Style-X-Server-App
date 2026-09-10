@@ -4,7 +4,7 @@ import { OrderQueryService } from './order-query.service';
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
-} from 'src/utils/types';
+} from 'src/utils/types/inventory.types';
 import {
   OrderHistoryAction,
   OrderHistoryType,

@@ -17,7 +17,8 @@ import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDTO, UpdateSupplierDTO } from './suppliers.dto';
 import { Response } from 'express';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
-import { QueryParams, SupplierPermission } from 'src/utils/types';
+import { SupplierPermission } from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
 

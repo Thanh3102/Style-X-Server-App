@@ -27,8 +27,8 @@ import { Response } from 'express';
 import {
   CategoryPermission,
   ProductPermission,
-  QueryParams,
-} from 'src/utils/types';
+} from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { isInteger } from 'src/utils/helper/StringHelper';

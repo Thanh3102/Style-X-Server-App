@@ -1,4 +1,4 @@
-import { DateFilterOptionValue } from 'src/utils/types';
+import { DateFilterOptionValue } from 'src/utils/types/query.types';
 import { ReportPeriodService } from './report-period.service';
 
 describe('ReportPeriodService', () => {

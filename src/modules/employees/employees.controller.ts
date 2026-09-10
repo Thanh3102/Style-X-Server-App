@@ -15,9 +15,9 @@ import { EmployeesService } from './employees.service';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import {
   EmployeePermission,
-  QueryParams,
   RolePermission,
-} from 'src/utils/types';
+} from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { Response } from 'express';
 import {
   CreateEmployeeDto,

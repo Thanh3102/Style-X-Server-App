@@ -12,7 +12,7 @@ import {
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
-} from 'src/utils/types';
+} from 'src/utils/types/inventory.types';
 
 @Injectable()
 export class ReceiveInventoryTransactionService {

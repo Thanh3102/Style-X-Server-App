@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { ReportService } from './report.service';
 
 @UseGuards(JwtGuard)

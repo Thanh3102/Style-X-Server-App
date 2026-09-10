@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { ProductInventoryService } from './product-inventory.service';
 import { ProductValidationService } from './product-validation.service';
 import { ProductVariantQueryService } from './product-variant-query.service';

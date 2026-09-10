@@ -1,4 +1,4 @@
-import { DateFilterOptionValue } from '../types';
+import { DateFilterOptionValue } from '../types/query.types';
 
 export const isStringDate = (string: string) => {
   const date = new Date(string);

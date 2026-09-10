@@ -3,7 +3,7 @@ import { TagType } from './tag.type';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Response } from 'express';
 import { convertToNumber } from 'src/utils/helper/StringHelper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { Prisma, Tag } from '@prisma/client';
 
 @Injectable()

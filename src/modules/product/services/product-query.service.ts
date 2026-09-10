@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { PublicProductParams } from '../product';
 import { CategoryService } from './category.service';
 import { CollectionService } from './collection.service';

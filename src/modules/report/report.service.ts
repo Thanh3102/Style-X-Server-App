@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Response } from 'express';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { ReportBestSaleService } from './services/report-best-sale.service';
 import { ReportLowStockService } from './services/report-low-stock.service';
 import { ReportOverviewService } from './services/report-overview.service';

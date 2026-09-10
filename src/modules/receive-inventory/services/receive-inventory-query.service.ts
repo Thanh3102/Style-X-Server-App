@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { TagType } from '../../tags/tag.type';
 import { ReceiveInventoryMapper } from './receive-inventory-mapper.service';
 

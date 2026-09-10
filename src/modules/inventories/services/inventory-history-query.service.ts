@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { PaginationData, QueryParams } from 'src/utils/types';
+import { PaginationData } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 
 const inventoryHistoryInclude = {
   changeUser: {

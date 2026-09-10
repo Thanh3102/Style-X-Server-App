@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import type { CartItemData } from '../cart/cart.type';
 import type {
   ActiveDiscount,

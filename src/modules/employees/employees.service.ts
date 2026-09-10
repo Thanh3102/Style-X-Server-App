@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Response } from 'express';
 import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
-import { AuthenticatedRequest, QueryParams } from 'src/utils/types';
+import { AuthenticatedRequest } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { EmployeeWithPassword, EmployeeWithVoid } from './employee.select';
 import {
   CreateEmployeeDto,

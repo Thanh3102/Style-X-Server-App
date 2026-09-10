@@ -12,7 +12,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { ChangePasswordDto, UpdateInfoDto } from './customer.type';

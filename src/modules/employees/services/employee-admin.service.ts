@@ -4,7 +4,8 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import { hashPlainText } from 'src/utils/helper/bcryptHelper';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { PaginationData, QueryParams } from 'src/utils/types';
+import { PaginationData } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { CreateEmployeeDto, UpdateEmployeeDto } from '../employees.type';
 import { EmployeeBasicInfo, employeeBasicInfoSelect } from '../employee.select';
 

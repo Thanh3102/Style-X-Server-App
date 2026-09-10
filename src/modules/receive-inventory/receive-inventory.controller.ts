@@ -23,7 +23,8 @@ import {
   ProcessPaymentDTO,
   UpdateReceiveInventoryDTO,
 } from './receive-inventory.dto';
-import { QueryParams, ReceiveInventoryPermission } from 'src/utils/types';
+import { ReceiveInventoryPermission } from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
 

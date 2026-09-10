@@ -4,7 +4,7 @@ import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
-} from 'src/utils/types';
+} from 'src/utils/types/inventory.types';
 import {
   CreateReceiveInventoryDTO,
   ReceiveHistoryAction,

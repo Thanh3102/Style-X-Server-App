@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { CloudinaryService } from '../../cloudinary/cloudinary.service';
 import { CreateCategoryDTO, UpdateCategoryDTO } from '../product';
 

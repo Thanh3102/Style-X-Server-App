@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DateFilterOptionValue } from 'src/utils/types';
+import { DateFilterOptionValue } from 'src/utils/types/query.types';
 import { ReportDateRange } from './report-date-range.service';
 
 export type ReportPeriod = {

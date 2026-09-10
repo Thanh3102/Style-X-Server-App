@@ -4,7 +4,7 @@ import { MailService } from 'src/modules/mail/mail.service';
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
-} from 'src/utils/types';
+} from 'src/utils/types/inventory.types';
 import {
   OrderHistoryAction,
   OrderHistoryType,

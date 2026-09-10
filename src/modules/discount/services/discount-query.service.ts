@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import {
   ActiveDiscountOptions,
   ActiveDiscountResult,

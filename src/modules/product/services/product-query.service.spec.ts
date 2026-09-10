@@ -1,4 +1,4 @@
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 import { CategoryService } from './category.service';
 import { CollectionService } from './collection.service';
 import { ProductAdminQueryService } from './product-admin-query.service';
