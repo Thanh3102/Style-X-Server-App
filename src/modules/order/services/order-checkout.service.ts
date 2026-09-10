@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
-import { MailService } from 'src/modules/mail/mail.service';
 import { CheckoutOrderDto } from '../order.dto';
 import { OrderStatus } from '../order.type';
+import { OrderNotificationService } from './order-notification.service';
 
 export type OrderWorkflowResult = {
   status: number;
@@ -14,11 +14,12 @@ export type OrderWorkflowResult = {
 export class OrderCheckoutService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mailService: MailService
+    private readonly notificationService: OrderNotificationService
   ) {}
 
   async checkout(dto: CheckoutOrderDto): Promise<OrderWorkflowResult> {
-    return this.prisma.$transaction(async (transaction) => {
+    let sendNotification: (() => Promise<void>) | undefined;
+    const workflow = await this.prisma.$transaction(async (transaction) => {
       const order = await transaction.order.findUnique({
         where: { id: dto.orderId },
       });
@@ -68,14 +69,18 @@ export class OrderCheckoutService {
         },
       });
 
-      await this.mailService.sendUserCheckoutComplete(
-        updatedOrder,
-        dto.email,
-        dto.name
-      );
+      sendNotification = () =>
+        this.notificationService.sendCheckoutComplete(
+          updatedOrder,
+          dto.email,
+          dto.name
+        );
 
       return this.result(200, { message: 'Tạo đơn hàng thành công.' });
     });
+
+    if (sendNotification) await sendNotification();
+    return workflow;
   }
 
   private result(

@@ -4,7 +4,6 @@ import PayOS from '@payos/node';
 import { CheckoutRequestType } from '@payos/node/lib/type';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
-import { MailService } from 'src/modules/mail/mail.service';
 import { CheckoutOrderDto } from '../order.dto';
 import {
   OrderStatus,
@@ -12,12 +11,13 @@ import {
   PayOsParams,
 } from '../order.type';
 import { OrderWorkflowResult } from './order-checkout.service';
+import { OrderNotificationService } from './order-notification.service';
 
 @Injectable()
 export class OrderPayOsGatewayService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mailService: MailService,
+    private readonly notificationService: OrderNotificationService,
     private readonly configService: ConfigService
   ) {}
 
@@ -97,7 +97,7 @@ export class OrderPayOsGatewayService {
       where: { id: orderId },
       data: { transactionStatus: OrderTransactionStatus.PAID },
     });
-    await this.mailService.sendUserCheckoutComplete(
+    await this.notificationService.sendCheckoutComplete(
       order,
       order.email,
       order.email

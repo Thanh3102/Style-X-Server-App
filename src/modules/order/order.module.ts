@@ -20,6 +20,7 @@ import { OrderResponseMapper } from './services/order-response-mapper.service';
 import { OrderVoucherPolicyService } from './services/order-voucher-policy.service';
 import { OrderVoucherApplicationService } from './services/order-voucher-application.service';
 import { OrderTemporaryCreationService } from './services/order-temporary-creation.service';
+import { OrderNotificationService } from './services/order-notification.service';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { OrderTemporaryCreationService } from './services/order-temporary-creati
     OrderVoucherPolicyService,
     OrderVoucherApplicationService,
     OrderTemporaryCreationService,
+    OrderNotificationService,
   ],
   exports: [],
 })

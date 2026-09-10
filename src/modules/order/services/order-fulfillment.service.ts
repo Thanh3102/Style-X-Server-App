@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { MailService } from 'src/modules/mail/mail.service';
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
@@ -11,12 +10,13 @@ import {
   OrderStatus,
   OrderTransactionStatus,
 } from '../order.type';
+import { OrderNotificationService } from './order-notification.service';
 
 @Injectable()
 export class OrderFulfillmentService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly mailService: MailService
+    private readonly notificationService: OrderNotificationService
   ) {}
 
   async confirmDelivery(
@@ -24,81 +24,91 @@ export class OrderFulfillmentService {
     isSendEmail: boolean,
     userId: number
   ): Promise<void> {
-    await this.prisma.$transaction(async (transaction) => {
-      const currentOrder = await transaction.order.findUnique({
-        where: { id: orderId },
-        select: { transactionStatus: true },
-      });
+    const orderForNotification = await this.prisma.$transaction(
+      async (transaction) => {
+        const currentOrder = await transaction.order.findUnique({
+          where: { id: orderId },
+          select: { transactionStatus: true },
+        });
 
-      const order = await transaction.order.update({
-        where: { id: orderId },
-        data: {
-          status:
-            currentOrder.transactionStatus === OrderTransactionStatus.PAID
-              ? OrderStatus.COMPLETE
-              : OrderStatus.IN_TRANSIT,
-          history: {
-            create: {
-              action: OrderHistoryAction.CONFIRM_SHIPPING,
-              type: OrderHistoryType.ADJUSTMENT,
-              changedUserId: userId,
-            },
-          },
-        },
-        select: {
-          code: true,
-          name: true,
-          email: true,
-          province: true,
-          district: true,
-          ward: true,
-          address: true,
-          items: {
-            select: {
-              product: { select: { name: true } },
-              priceAfterDiscount: true,
-              quantity: true,
-              totalPriceAfterDiscount: true,
-              sources: true,
-              variantId: true,
-            },
-          },
-        },
-      });
-
-      for (const item of order.items) {
-        for (const source of item.sources) {
-          const inventory = await transaction.inventory.findFirst({
-            where: {
-              variant_id: item.variantId,
-              warehouse_id: source.warehouseId,
-            },
-          });
-          if (!inventory) continue;
-
-          await transaction.inventory.update({
-            where: { id: inventory.id },
-            data: {
-              onHand: { decrement: source.quantity },
-              histories: {
-                create: {
-                  transactionAction: InventoryTransactionAction.DELIVERY,
-                  transactionType: InventoryTransactionType.ORDER,
-                  onHandQuantityChange: source.quantity * -1,
-                  newOnHand: inventory.onHand * source.quantity,
-                  changeUserId: userId,
-                  orderId,
-                },
+        const order = await transaction.order.update({
+          where: { id: orderId },
+          data: {
+            status:
+              currentOrder.transactionStatus === OrderTransactionStatus.PAID
+                ? OrderStatus.COMPLETE
+                : OrderStatus.IN_TRANSIT,
+            history: {
+              create: {
+                action: OrderHistoryAction.CONFIRM_SHIPPING,
+                type: OrderHistoryType.ADJUSTMENT,
+                changedUserId: userId,
               },
             },
-          });
-        }
-      }
+          },
+          select: {
+            code: true,
+            name: true,
+            email: true,
+            province: true,
+            district: true,
+            ward: true,
+            address: true,
+            items: {
+              select: {
+                product: { select: { name: true } },
+                priceAfterDiscount: true,
+                quantity: true,
+                totalPriceAfterDiscount: true,
+                sources: true,
+                variantId: true,
+              },
+            },
+          },
+        });
 
-      if (isSendEmail) {
-        await this.mailService.sendUserDeliveryConfirmNotification(order);
+        for (const item of order.items) {
+          for (const source of item.sources) {
+            const inventory = await transaction.inventory.findFirst({
+              where: {
+                variant_id: item.variantId,
+                warehouse_id: source.warehouseId,
+              },
+            });
+            if (!inventory) {
+              throw new Error(
+                `Missing inventory for order ${orderId}, variant ${item.variantId}, warehouse ${source.warehouseId}`
+              );
+            }
+
+            await transaction.inventory.update({
+              where: { id: inventory.id },
+              data: {
+                onHand: { decrement: source.quantity },
+                histories: {
+                  create: {
+                    transactionAction: InventoryTransactionAction.DELIVERY,
+                    transactionType: InventoryTransactionType.ORDER,
+                    onHandQuantityChange: source.quantity * -1,
+                    newOnHand: inventory.onHand * source.quantity,
+                    changeUserId: userId,
+                    orderId,
+                  },
+                },
+              },
+            });
+          }
+        }
+
+        return isSendEmail ? order : undefined;
       }
-    });
+    );
+
+    if (orderForNotification) {
+      await this.notificationService.sendDeliveryConfirmed(
+        orderForNotification
+      );
+    }
   }
 
   async confirmPaymentReceived(orderId: string, userId: number): Promise<void> {
@@ -131,7 +141,11 @@ export class OrderFulfillmentService {
                 warehouse_id: source.warehouseId,
               },
             });
-            if (!inventory) continue;
+            if (!inventory) {
+              throw new Error(
+                `Missing inventory for order ${orderId}, variant ${item.variantId}, warehouse ${source.warehouseId}`
+              );
+            }
 
             await transaction.inventory.update({
               where: { id: inventory.id },

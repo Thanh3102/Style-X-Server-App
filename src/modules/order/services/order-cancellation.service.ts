@@ -34,7 +34,11 @@ export class OrderCancellationService {
                 warehouse_id: source.warehouseId,
               },
             });
-            if (!inventory) continue;
+            if (!inventory) {
+              throw new Error(
+                `Missing inventory for order ${orderId}, variant ${item.variant.id}, warehouse ${source.warehouseId}`
+              );
+            }
 
             await transaction.inventory.update({
               where: { id: inventory.id },
@@ -124,7 +128,11 @@ export class OrderCancellationService {
                 warehouse_id: source.warehouseId,
               },
             });
-            if (!inventory) continue;
+            if (!inventory) {
+              throw new Error(
+                `Missing inventory for order ${dto.orderId}, variant ${item.variantId}, warehouse ${source.warehouseId}`
+              );
+            }
 
             if (source.receiveId && dto.isReStock) {
               await transaction.receiveItem.updateMany({
