@@ -2,6 +2,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { OrderPayOsGatewayService } from './order-pay-os-gateway.service';
 import { OrderNotificationService } from './order-notification.service';
 import { MailService } from 'src/modules/mail/mail.service';
+import { OrderTransactionStatus } from '../order.type';
 
 describe('OrderPayOsGatewayService', () => {
   it('keeps the PayOS success workflow resolved when notification fails after status persistence', async () => {
@@ -34,7 +35,7 @@ describe('OrderPayOsGatewayService', () => {
 
     expect(update).toHaveBeenCalledWith({
       where: { id: 'order-1' },
-      data: { transactionStatus: expect.any(String) },
+      data: { transactionStatus: OrderTransactionStatus.PAID },
     });
     expect(mailService.sendUserCheckoutComplete).toHaveBeenCalledWith(
       order,
@@ -42,5 +43,26 @@ describe('OrderPayOsGatewayService', () => {
       order.email
     );
     expect(notificationObservedAfterStatusPersistence).toBe(true);
+  });
+
+  it('does not notify when PayOS status persistence fails', async () => {
+    const persistenceError = new Error('database unavailable');
+    const update = jest.fn().mockRejectedValue(persistenceError);
+    const notificationService = {
+      sendCheckoutComplete: jest.fn(),
+    } as unknown as OrderNotificationService;
+    const service = new OrderPayOsGatewayService(
+      {
+        order: { update },
+      } as unknown as PrismaService,
+      notificationService,
+      {} as never
+    );
+
+    await expect(service.markPaymentSucceeded('order-1')).rejects.toBe(
+      persistenceError
+    );
+
+    expect(notificationService.sendCheckoutComplete).not.toHaveBeenCalled();
   });
 });
