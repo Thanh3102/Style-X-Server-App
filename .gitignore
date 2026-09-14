@@ -40,10 +40,19 @@ lerna-debug.log*
 # Dockerfile
 Dockerfile
 
-# AI Agents
-.agents
+# Local AI agent configuration, skills, and plans
+.agents/
+.codex/
+.claude/
+.superpowers/
+/skills/
 AGENTS.md
+CLAUDE.md
+GEMINI.md
+SKILL.md
+skills-lock.json
 PLAN.md
+plan.md
 
 # Git worktrees
 .worktrees/
