@@ -1,4 +1,3 @@
-import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -7,7 +6,6 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
 
 export class CreateSupplierDTO {
@@ -101,9 +99,8 @@ export class UpdateSupplierDTO {
   assignedId: number;
 
   @IsBoolean()
-  active: boolean
+  active: boolean;
 
   @IsArray()
   tags: string[];
 }
-

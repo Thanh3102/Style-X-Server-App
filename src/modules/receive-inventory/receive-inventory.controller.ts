@@ -23,7 +23,8 @@ import {
   ProcessPaymentDTO,
   UpdateReceiveInventoryDTO,
 } from './receive-inventory.dto';
-import { QueryParams, ReceiveInventoryPermission } from 'src/utils/types';
+import { ReceiveInventoryPermission } from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
 
@@ -56,7 +57,7 @@ export class ReceiveInventoryController {
   create(
     @Body() dto: CreateReceiveInventoryDTO,
     @Req() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.receiveInventoryService.create(dto, req, res);
   }
@@ -66,7 +67,7 @@ export class ReceiveInventoryController {
   update(
     @Body() dto: UpdateReceiveInventoryDTO,
     @Req() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.receiveInventoryService.update(dto, req, res);
   }
@@ -76,7 +77,7 @@ export class ReceiveInventoryController {
   cancel(
     @Body() dto: CancelReceiveInventoryDTO,
     @Req() req,
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     return this.receiveInventoryService.cancel(dto, req, res);
   }

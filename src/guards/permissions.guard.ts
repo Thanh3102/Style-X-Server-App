@@ -5,7 +5,6 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Observable } from 'rxjs';
 import { PERMISSIONS_KEY } from 'src/decorators/permission.decorator';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -13,13 +12,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
-    private prisma: PrismaService,
+    private prisma: PrismaService
   ) {}
 
   async canActivate(context: ExecutionContext) {
     const requiredPermissions = this.reflector.get<string[]>(
       PERMISSIONS_KEY,
-      context.getHandler(),
+      context.getHandler()
     );
     if (!requiredPermissions) {
       return true;
@@ -49,7 +48,7 @@ export class PermissionsGuard implements CanActivate {
 
     const hasPermission = () =>
       userPermissions.some((permission) =>
-        requiredPermissions.includes(permission),
+        requiredPermissions.includes(permission)
       );
     if (!user || !hasPermission()) {
       throw new ForbiddenException('Không có quyền thực hiện');

@@ -35,14 +35,13 @@ const generateRandomVendor = () => {
 
 export const generateProduct = (
   categoryId: number,
-  categoryName: string,
+  categoryName: string
 ): Product => {
-
-  const price = generateRandomPrice(30000, 6e6)
+  const price = generateRandomPrice(30000, 6e6);
 
   const name = `${categoryName} - ${Math.random().toString(36).substring(10)}`;
   const costPrice = price;
-  const sellPrice = price * 1.2
+  const sellPrice = price * 1.2;
   const unit = 'Cái';
   const vendor = generateRandomVendor();
   const quantity = generateRandomQuantity();

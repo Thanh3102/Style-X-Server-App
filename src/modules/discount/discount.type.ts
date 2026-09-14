@@ -1,4 +1,7 @@
-import { DiscountService } from './discount.service';
+import type {
+  ActiveDiscountResult,
+  VoucherResult,
+} from './discount-query.type';
 
 export type CreateDiscountDTO = {
   type: string;
@@ -54,12 +57,6 @@ export type UpdateDiscountDTO = {
   applyFor: string;
 };
 
-export type ActiveDiscount = Awaited<
-  ReturnType<typeof DiscountService.prototype.getActiveDiscounts>
->[number];
+export type ActiveDiscount = ActiveDiscountResult;
 
-export type Voucher = Awaited<
-  ReturnType<typeof DiscountService.prototype.findVoucher>
->;
-
-
+export type Voucher = VoucherResult | null;

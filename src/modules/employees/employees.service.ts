@@ -1,604 +1,184 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Response } from 'express';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { comparePassword, hashPlainText } from 'src/utils/helper/bcryptHelper';
-import { QueryParams } from 'src/utils/types';
+import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
+import { AuthenticatedRequest } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
+import { EmployeeWithPassword, EmployeeWithVoid } from './employee.select';
 import {
   CreateEmployeeDto,
   CreateRoleDto,
   UpdateEmployeeDto,
   UpdateRoleDto,
 } from './employees.type';
-import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
-import { Prisma } from '@prisma/client';
-import { isInteger } from 'src/utils/helper/StringHelper';
-import { parse } from 'path';
+import { EmployeeAccountService } from './services/employee-account.service';
+import { EmployeeAdminService } from './services/employee-admin.service';
+import { RolePermissionService } from './services/role-permission.service';
 
 @Injectable()
 export class EmployeesService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(EmployeesService.name);
 
-  private employeeBasicInfoSelect: Prisma.EmployeeSelect = {
-    id: true,
-    code: true,
-    username: true,
-    name: true,
-    email: true,
-    gender: true,
-    dateOfBirth: true,
-    createdAt: true,
-    lastLoginAt: true,
-    phoneNumber: true,
-    isEmployed: true,
-    roleId: true,
-  };
+  constructor(
+    private readonly accountService: EmployeeAccountService,
+    private readonly adminService: EmployeeAdminService,
+    private readonly rolePermissionService: RolePermissionService
+  ) {}
 
-  async getUsers(res: Response, params: QueryParams) {
-    const { page: pg, limit: lim, query, isEmployed, role } = params;
-
-    const page = !isNaN(Number(pg)) ? Number(pg) : 1;
-    const limit = !isNaN(Number(lim)) ? Number(lim) : 20;
-
-    let whereCondition: Prisma.EmployeeWhereInput = {
-      void: false,
-      id: {
-        not: {
-          in: [1, 2],
-        },
-      },
-    };
-
-    if (query) {
-      whereCondition = {
-        ...whereCondition,
-        OR: [
-          {
-            code: {
-              startsWith: query.trim(),
-            },
-          },
-          {
-            name: {
-              startsWith: query.trim(),
-            },
-          },
-          {
-            phoneNumber: {
-              startsWith: query.trim(),
-            },
-          },
-          {
-            email: {
-              startsWith: query.trim(),
-            },
-          },
-        ],
-      };
-    }
-
-    if (isEmployed) {
-      whereCondition.isEmployed = isEmployed === 'true';
-    }
-
-    if (role && isInteger(role)) {
-      whereCondition.roleId = parseInt(role);
-    }
-
-    const userCount = await this.prisma.employee.count({
-      where: whereCondition,
-    });
-
-    const employees = await this.prisma.employee.findMany({
-      select: this.employeeBasicInfoSelect,
-      where: whereCondition,
-      skip: page === 1 ? 0 : limit * (page - 1),
-      take: limit,
-    });
-
-    return res.status(200).json({
-      employees: employees,
-      paginition: {
-        total: Math.floor(
-          userCount % limit === 0 ? userCount / limit : userCount / limit + 1
-        ),
-        count: userCount,
-        page: page,
-        limit: limit,
-      },
-    });
+  async getUsers(res: Response, params: QueryParams): Promise<Response> {
+    return res.status(200).json(await this.adminService.getUsers(params));
   }
 
-  async findById(employee_id: number) {
-    const employee = await this.prisma.employee.findUnique({
-      where: {
-        id: employee_id,
-      },
-      select: {
-        password: true,
-        ...this.employeeBasicInfoSelect,
-      },
-    });
-
-    return employee;
+  findById(employeeId: number): Promise<EmployeeWithPassword | null> {
+    return this.accountService.findById(employeeId);
   }
 
-  async findByUsername(username: string) {
-    const employee = await this.prisma.employee.findFirst({
-      where: {
-        username: username,
-        void: false,
-      },
-      select: {
-        password: true,
-        void: true,
-        ...this.employeeBasicInfoSelect,
-      },
-    });
-
-    return employee;
+  findByUsername(username: string): Promise<EmployeeWithVoid | null> {
+    return this.accountService.findByUsername(username);
   }
 
-  async updateLastLogin(employee_id: number) {
-    await this.prisma.employee.update({
-      data: {
-        lastLoginAt: new Date(),
-      },
-      where: {
-        id: employee_id,
-      },
-    });
+  updateLastLogin(employeeId: number): Promise<void> {
+    return this.accountService.updateLastLogin(employeeId);
   }
 
-  async verifyUser(username: string, password: string) {
-    const employee = await this.findByUsername(username);
-
-    if (!employee || employee.void) {
-      throw new NotFoundException('Tài khoản không tồn tại');
-    }
-
-    const isCorrectPW = await comparePassword(password, employee.password);
-
-    if (!isCorrectPW) {
-      throw new BadRequestException('Mật khẩu không chính xác');
-    } else await this.updateLastLogin(employee.id);
-
-    return employee;
+  verifyUser(username: string, password: string): Promise<EmployeeWithVoid> {
+    return this.accountService.verifyUser(username, password);
   }
 
-  async getRoles(res: Response) {
+  async getRoles(res: Response): Promise<Response> {
     try {
-      const roles = await this.prisma.role.findMany({
-        select: {
-          id: true,
-          name: true,
-          createdAt: true,
-          isEditable: true,
-          isDeletable: true,
-          rolePermissions: {
-            select: {
-              permission: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-          employees: {
-            select: {
-              id: true,
-              name: true,
-            },
-            where: {
-              void: false,
-            },
-          },
-          _count: {
-            select: {
-              employees: true,
-            },
-          },
-        },
-        orderBy: {
-          name: 'asc',
-        },
-        where: {
-          void: false,
-        },
-      });
-
-      const tranformRoles = roles.map((role) => {
-        const { rolePermissions, ...data } = role;
-        const permissions = rolePermissions.map((item) => item.permission);
-        return { ...data, permissions };
-      });
-
-      return res.status(200).json(tranformRoles);
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({
-        message: error.message ?? 'Đã xảy ra lỗi',
-      });
+      return res.status(200).json(await this.rolePermissionService.getRoles());
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async getPermissions(res: Response) {
+  async getPermissions(res: Response): Promise<Response> {
     try {
-      const permissionSections = await this.prisma.permissionSection.findMany({
-        select: {
-          id: true,
-          name: true,
-          permissions: {
-            select: {
-              id: true,
-              name: true,
-              displayName: true,
-            },
-          },
-        },
-        orderBy: {
-          id: 'asc',
-        },
-      });
-
-      return res.status(200).json(permissionSections);
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({
-        message: error.message ?? 'Đã xảy ra lỗi',
-      });
+      return res
+        .status(200)
+        .json(await this.rolePermissionService.getPermissions());
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async createRole(dto: CreateRoleDto, req, res) {
+  async createRole(
+    dto: CreateRoleDto,
+    _req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> {
     try {
-      const existRole = await this.prisma.role.findFirst({
-        where: {
-          name: dto.name,
-        },
-      });
-
-      if (existRole) throw new Error('Tên vai trò đã tồn tại');
-
-      await this.prisma.role.create({
-        data: {
-          isDeletable: true,
-          isEditable: true,
-          name: dto.name,
-          rolePermissions: {
-            createMany: {
-              data: dto.permissionIds.map((id) => ({ permissionId: id })),
-            },
-          },
-        },
-      });
-
+      await this.rolePermissionService.createRole(dto);
       return res.status(200).json({ message: 'Thêm vai trò mới thành công' });
-    } catch (error) {
-      console.log(error);
-
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async updateRole(dto: UpdateRoleDto, res) {
+  async updateRole(dto: UpdateRoleDto, res: Response): Promise<Response> {
     try {
-      await this.prisma.$transaction(async (p) => {
-        const existRole = await p.role.findFirst({
-          where: {
-            name: dto.name,
-            id: {
-              not: dto.id,
-            },
-          },
-        });
-
-        if (existRole) throw new Error('Tên vai trò đã tồn tại');
-
-        const currentPermissionIds = await p.rolePermission
-          .findMany({
-            where: {
-              roleId: dto.id,
-            },
-            select: {
-              permissionId: true,
-            },
-          })
-          .then((data) => data.map((item) => item.permissionId));
-
-        const addPermissionIds = dto.permissionIds.filter(
-          (id) => !currentPermissionIds.includes(id)
-        );
-
-        const deletePermissionIds = currentPermissionIds.filter(
-          (id) => !dto.permissionIds.includes(id)
-        );
-
-        if (addPermissionIds.length > 0) {
-          await p.rolePermission.createMany({
-            data: addPermissionIds.map((id) => ({
-              permissionId: id,
-              roleId: dto.id,
-            })),
-          });
-        }
-
-        if (deletePermissionIds.length > 0) {
-          await p.rolePermission.deleteMany({
-            where: {
-              roleId: dto.id,
-              permissionId: {
-                in: deletePermissionIds,
-              },
-            },
-          });
-        }
-      });
-
+      await this.rolePermissionService.updateRole(dto);
       return res.status(200).json({ message: 'Cập nhật vai trò thành công' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async deleteRole(roleId: number, res) {
+  async deleteRole(roleId: number, res: Response): Promise<Response> {
     try {
-      const countEmployee = await this.prisma.employee.count({
-        where: {
-          roleId: roleId,
-          void: false,
-        },
-      });
-
-      if (countEmployee > 0)
-        throw new BadRequestException(
-          'Không thể xóa do có nhân viên thuộc vai trò này'
-        );
-
-      await this.prisma.role.update({
-        where: {
-          id: roleId,
-        },
-        data: {
-          void: true,
-        },
-      });
-
+      await this.rolePermissionService.deleteRole(roleId);
       return res.status(200).json({ message: 'Đã xóa vai trò' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async checkCreateDuplicateEmployee(dto: CreateEmployeeDto) {
-    const existEmail = await this.prisma.employee.findFirst({
-      where: {
-        email: dto.email,
-        void: false,
-      },
-    });
-
-    if (existEmail) throw new Error('Email đã tồn tại');
-
-    const existPhone = await this.prisma.employee.findFirst({
-      where: {
-        phoneNumber: dto.phoneNumber,
-        void: false,
-      },
-    });
-
-    if (existPhone) throw new Error('Số điện thoại đã tồn tại');
-  }
-
-  async checkUpdateDuplicateEmployee(dto: UpdateEmployeeDto) {
-    const existEmail = await this.prisma.employee.findFirst({
-      where: {
-        email: dto.email,
-        id: {
-          not: dto.id,
-        },
-      },
-    });
-
-    if (existEmail) throw new Error('Email đã tồn tại');
-
-    const existPhone = await this.prisma.employee.findFirst({
-      where: {
-        phoneNumber: dto.phoneNumber,
-        id: {
-          not: dto.id,
-        },
-      },
-    });
-
-    if (existPhone) throw new Error('Số điện thoại đã tồn tại');
-  }
-
-  async createEmployee(dto: CreateEmployeeDto, req, res: Response) {
+  async createEmployee(
+    dto: CreateEmployeeDto,
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> {
     try {
-      await this.checkCreateDuplicateEmployee(dto);
-      const hashPW = await hashPlainText(dto.email);
-      const code = await generateCustomID('USER', 'employee');
-      const dob = new Date(dto.dateOfBirth);
-      const dateOfBirth = new Date(
-        Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate())
+      await this.adminService.createEmployee(
+        dto,
+        parseInt(String(req.user.id))
       );
-
-      await this.prisma.employee.create({
-        data: {
-          code: code,
-          username: dto.email,
-          password: hashPW,
-          name: dto.name,
-          dateOfBirth: dateOfBirth,
-          email: dto.email,
-          gender: dto.gender === 1 ? true : false,
-          phoneNumber: dto.phoneNumber,
-          roleId: dto.roleId,
-          createdEmployeeId: parseInt(req.user.id),
-        },
-      });
-
       return res.status(200).json({ message: 'Thêm nhân viên thành công' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async updateEmployee(dto: UpdateEmployeeDto, res) {
+  async updateEmployee(
+    dto: UpdateEmployeeDto,
+    res: Response
+  ): Promise<Response> {
     try {
-      await this.checkUpdateDuplicateEmployee(dto);
-      const dob = new Date(dto.dateOfBirth);
-      const dateOfBirth = new Date(
-        Date.UTC(dob.getFullYear(), dob.getMonth(), dob.getDate())
-      );
-
-      await this.prisma.employee.update({
-        where: {
-          id: dto.id,
-        },
-        data: {
-          name: dto.name,
-          dateOfBirth: dateOfBirth,
-          email: dto.email,
-          gender: dto.gender === 1 ? true : false,
-          phoneNumber: dto.phoneNumber,
-          roleId: dto.roleId,
-          isEmployed: dto.isEmployed,
-        },
-      });
-
+      await this.adminService.updateEmployee(dto);
       return res.status(200).json({ message: 'Đã cập nhật thông tin' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async deleteEmployee(id: number, res: Response) {
+  async deleteEmployee(id: number, res: Response): Promise<Response> {
     try {
-      await this.prisma.employee.update({
-        where: {
-          id: id,
-        },
-        data: {
-          void: true,
-        },
-      });
-
+      await this.adminService.deleteEmployee(id);
       return res.status(200).json({ message: 'Đã xóa nhân viên' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async getMe(req, res: Response) {
+  async getMe(req: AuthenticatedRequest, res: Response): Promise<Response> {
     try {
-      const id = req.user.id;
-      const employee = await this.prisma.employee.findUnique({
-        where: {
-          id: parseInt(id),
-        },
-        select: this.employeeBasicInfoSelect,
-      });
+      const employee = await this.accountService.getMe(
+        parseInt(String(req.user.id))
+      );
       return res.status(200).json(employee);
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
   async changePassword(
     dto: { oldPassword: string; newPassword: string },
-    req,
+    req: AuthenticatedRequest,
     res: Response
-  ) {
-    const { oldPassword, newPassword } = dto;
+  ): Promise<Response> {
     try {
-      const employee = await this.findById(req.user.id);
-
-      const isCorrectPW = await comparePassword(oldPassword, employee.password);
-
-      if (!isCorrectPW) {
-        throw new BadRequestException('Mật khẩu cũ không chính xác');
-      }
-
-      const hashPW = await hashPlainText(newPassword);
-
-      await this.prisma.employee.update({
-        where: {
-          id: req.user.id,
-        },
-        data: {
-          password: hashPW,
-        },
-      });
-
+      await this.accountService.changePassword(
+        req.user.id as number,
+        dto.oldPassword,
+        dto.newPassword
+      );
       return res.status(200).json({ message: 'Đã cập nhật mật khẩu' });
-    } catch (error) {
-      console.log(error);
-      return res
-        .status(500)
-        .json({ message: error.message ?? 'Đã xảy ra lỗi' });
+    } catch (error: unknown) {
+      return this.internalServerError(res, error);
     }
   }
 
-  async getCurrentPermissions(req, res: Response) {
+  async getCurrentPermissions(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> {
     try {
-      const employee = await this.prisma.employee.findUnique({
-        where: {
-          id: parseInt(req.user.id),
-        },
-        select: {
-          role: {
-            select: {
-              rolePermissions: {
-                select: {
-                  permission: {
-                    select: {
-                      name: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!employee) throw new BadRequestException('User not found');
-
-      const permissions = [];
-      for (const perm of employee.role.rolePermissions) {
-        permissions.push(perm.permission.name);
-      }
-
+      const permissions = await this.accountService.getCurrentPermissions(
+        parseInt(String(req.user.id))
+      );
       return res.status(200).json(permissions);
-    } catch (error) {
-      console.log(error);
+    } catch (error: unknown) {
+      this.logError(error);
       return res.status(200).json({ message: 'Đã xảy ra lỗi' });
     }
+  }
+
+  private internalServerError(res: Response, error: unknown): Response {
+    this.logError(error);
+    return res.status(500).json({ message: getErrorMessage(error) });
+  }
+
+  private logError(error: unknown): void {
+    this.logger.error(getErrorMessage(error), getErrorStack(error));
   }
 }

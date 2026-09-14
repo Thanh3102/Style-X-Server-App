@@ -21,8 +21,8 @@ export enum ReceiveHistoryAction {
   RECEIVED = 'Nhập hàng',
   CANCELLED = 'Hủy đơn',
   PAID = 'Thanh toán',
-  UPDATE = "Cập nhật thông tin",
-  DELETE = "Xóa đơn"
+  UPDATE = 'Cập nhật thông tin',
+  DELETE = 'Xóa đơn',
 }
 
 export type CreateReceiveInventoryDTO = {
@@ -85,9 +85,9 @@ export type UpdateReceiveInventoryDTO = {
   note: string;
   deleteTags: string[];
   addTags: string[];
-}
+};
 
 export type CancelReceiveInventoryDTO = {
   receiveId: number;
   returnItem: boolean;
-}
+};

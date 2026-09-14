@@ -18,7 +18,7 @@ import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { InventoriesService } from './inventories.service';
 import { ChangeOnHandDTO } from './inventories.dto';
 import { isInteger } from 'src/utils/helper/StringHelper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
 
 @UseGuards(JwtGuard)
 @UseInterceptors(LoggerInterceptor)

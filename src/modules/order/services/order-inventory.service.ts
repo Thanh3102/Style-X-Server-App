@@ -1,15 +1,15 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { CartItem } from '../order.type';
-import { PrismaTransactionObject } from 'src/prisma/prisma.types';
+import { PrismaTransactionClient } from 'src/prisma/prisma.types';
 import {
   InventoryTransactionAction,
   InventoryTransactionType,
-} from 'src/utils/types';
+} from 'src/utils/types/inventory.types';
 
 @Injectable()
 export class OrderInventoryService {
   constructor() {}
-  async findItemReceive(item: CartItem, p: PrismaTransactionObject) {
+  async findItemReceive(item: CartItem, p: PrismaTransactionClient) {
     // Lọc ra các lô hàng có sản phẩm này (Xếp theo lô hàng nhập lâu nhất còn hàng và theo thứ tự kho )
     const receiveItems = await p.receiveItem.findMany({
       where: {

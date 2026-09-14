@@ -22,7 +22,8 @@ import {
   CreateTempOrderDto,
 } from './order.dto';
 import { Public } from 'src/decorators/public.decorator';
-import { OrderPermission, QueryParams } from 'src/utils/types';
+import { OrderPermission } from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { Response } from 'express';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';

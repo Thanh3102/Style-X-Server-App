@@ -3,38 +3,39 @@ import { TagType } from './tag.type';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Response } from 'express';
 import { convertToNumber } from 'src/utils/helper/StringHelper';
-import { QueryParams } from 'src/utils/types';
+import { QueryParams } from 'src/utils/types/query.types';
+import { Prisma, Tag } from '@prisma/client';
 
 @Injectable()
 export class TagsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  private tagBasicInfoSelect = {
+  private readonly tagBasicInfoSelect: Prisma.TagSelect = {
     id: true,
     name: true,
   };
 
-  async create(type: TagType, name: string) {
+  async create(type: TagType, name: string): Promise<Tag> {
     const tag = await this.prisma.tag.create({
       data: {
-        name: name,
-        type: type,
+        name,
+        type,
       },
     });
     return tag;
   }
 
-  async getTags(res: Response, params: QueryParams) {
+  async getTags(res: Response, params: QueryParams): Promise<Response> {
     const { limit: lim, page: pg, query, tagType } = params;
-    let page = convertToNumber(pg);
-    let limit = convertToNumber(lim);
+    const page = convertToNumber(pg);
+    const limit = convertToNumber(lim);
 
     // const tagCount = await this.prisma.tag.count();
 
-    let queryConditon = {};
+    let queryCondition: Prisma.TagWhereInput = {};
 
     if (query) {
-      queryConditon = {
+      queryCondition = {
         name: {
           startsWith: query,
         },
@@ -43,7 +44,7 @@ export class TagsService {
 
     const whereCondition = {
       type: tagType,
-      ...queryConditon,
+      ...queryCondition,
     };
 
     const tags = await this.prisma.tag.findMany({
@@ -54,7 +55,7 @@ export class TagsService {
     });
 
     return res.status(200).json({
-      tags: tags.map((t) => t.name),
+      tags: tags.map((tag) => tag.name),
     });
   }
 }

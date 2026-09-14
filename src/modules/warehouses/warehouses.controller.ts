@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
   Post,
@@ -15,7 +14,8 @@ import {
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { WarehousesService } from './warehouses.service';
-import { QueryParams, WarehousePermission } from 'src/utils/types';
+import { WarehousePermission } from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { CreateWarehouseDto } from './warehouses.dto';
 import { UpdateWarehouseDto } from './warehouses.type';
@@ -55,7 +55,7 @@ export class WarehousesController {
   getDetail(
     @Param('warehouse_id') warehouseId: string,
     @Query() params: QueryParams,
-    @Res() res,
+    @Res() res
   ) {
     return this.warehouseService.getDetail(parseInt(warehouseId), params, res);
   }

@@ -17,7 +17,8 @@ import { CreateDiscountDTO, UpdateDiscountDTO } from './discount.dto';
 import { JwtGuard } from 'src/guards/jwt.guard';
 import { LoggerInterceptor } from 'src/interceptors/logging.interceptor';
 import { Response } from 'express';
-import { DiscountPermission, QueryParams } from 'src/utils/types';
+import { DiscountPermission } from 'src/utils/types/permissions';
+import { QueryParams } from 'src/utils/types/query.types';
 import { isInteger } from 'src/utils/helper/StringHelper';
 import { PermissionsGuard } from 'src/guards/permissions.guard';
 import { Permissions } from 'src/decorators/permission.decorator';
@@ -57,7 +58,7 @@ export class DiscountController {
   updateActive(
     @Param('id') id: string,
     @Body() { active }: { active: boolean },
-    @Res() res: Response,
+    @Res() res: Response
   ) {
     if (!isInteger(id))
       return res.json({ message: 'Mã khuyến mại không hơp lệ' });

@@ -34,7 +34,7 @@ export class CancelOrderDto {
   orderId: string;
   isReStock: boolean;
   reason: string;
-};
+}
 
 export class ConfirmPaymentReceivedDto {
   orderId: string;

@@ -1,14 +1,20 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { tranformCreatedOnParams } from 'src/utils/helper/DateHelper';
-import { QueryParams } from 'src/utils/types';
-import { FormatOrder, OrderListResponseData } from '../order.type';
+import { transformCreatedOnParams } from 'src/utils/helper/DateHelper';
+import { QueryParams } from 'src/utils/types/query.types';
+import { OrderListResponseData } from '../order.type';
 import { Response } from 'express';
+import { OrderResponseMapper } from './order-response-mapper.service';
 
 @Injectable()
 export class OrderQueryService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(OrderQueryService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly responseMapper: OrderResponseMapper
+  ) {}
 
   async getOrder(orderId: string) {
     const order = await this.prisma.order.findUnique({
@@ -92,7 +98,7 @@ export class OrderQueryService {
     }
 
     if (createdOn || createdOnMin || createdOnMax) {
-      const { startDate, endDate } = tranformCreatedOnParams(
+      const { startDate, endDate } = transformCreatedOnParams(
         createdOn,
         createdOnMin,
         createdOnMax
@@ -261,29 +267,12 @@ export class OrderQueryService {
     try {
       const { orders, paginition } = await this.getOrderList(params);
 
-      const formatOrderData: FormatOrder[] = orders.map((order) => {
-        return {
-          id: order.id,
-          code: order.code,
-          customer: order.customer,
-          createdAt: order.createdAt,
-          status: order.status,
-          transactionStatus: order.transactionStatus,
-          total: order.totalOrderAfterDiscount,
-          customerId: order.customerId,
-          phoneNumber: order.phoneNumber,
-          name: order.name,
-        };
-      });
-
-      const responseData: OrderListResponseData = {
-        data: formatOrderData,
-        paginition: paginition,
-      };
+      const responseData: OrderListResponseData =
+        this.responseMapper.toListResponse(orders, paginition);
 
       return res.status(200).json(responseData);
-    } catch (error) {
-      console.log(error);
+    } catch (error: unknown) {
+      this.logger.error(error instanceof Error ? error.stack : String(error));
       return res.status(500).json({
         message: 'Đã xảy ra lỗi',
       });

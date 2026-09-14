@@ -6,7 +6,7 @@ export async function generateCustomID(
   prefix: string,
   table: string,
   codeColumn: string = 'code',
-  pad: number = 6,
+  pad: number = 6
 ) {
   const lastCustomIdRecord = await prisma[table].findFirst({
     select: { [codeColumn]: true },

@@ -52,7 +52,7 @@ export const getLastMonthStartEnd = () => {
   const firstDayOfCurrentMonth = new Date(
     today.getFullYear(),
     today.getMonth(),
-    1,
+    1
   );
 
   // Tính ngày đầu tiên của tháng trước
@@ -77,14 +77,14 @@ export const getThisMonthStartEnd = () => {
   const firstDayOfCurrentMonth = new Date(
     today.getFullYear(),
     today.getMonth(),
-    1,
+    1
   );
 
   // Tính ngày cuối cùng của tháng hiện tại
   const lastDayOfCurrentMonth = new Date(
     today.getFullYear(),
     today.getMonth() + 1,
-    0,
+    0
   );
 
   return {
@@ -224,10 +224,10 @@ export const convertParamsToCondition = (createdOn: string) => {
   }
 };
 
-export const tranformCreatedOnParams = (
+export const transformCreatedOnParams = (
   createdOn?: string,
   createdOnMin?: string,
-  createdOnMax?: string,
+  createdOnMax?: string
 ) => {
   let startDate: Date = undefined;
   let endDate: Date = undefined;

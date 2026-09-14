@@ -1,0 +1,68 @@
+import { PrismaService } from 'src/prisma/prisma.service';
+import { OrderPayOsGatewayService } from './order-pay-os-gateway.service';
+import { OrderNotificationService } from './order-notification.service';
+import { MailService } from 'src/modules/mail/mail.service';
+import { OrderTransactionStatus } from '../order.type';
+
+describe('OrderPayOsGatewayService', () => {
+  it('keeps the PayOS success workflow resolved when notification fails after status persistence', async () => {
+    const order = { id: 'order-1', email: 'buyer@example.com' };
+    const update = jest.fn().mockResolvedValue(order);
+    let statusPersisted = false;
+    update.mockImplementation(async () => {
+      statusPersisted = true;
+      return order;
+    });
+    let notificationObservedAfterStatusPersistence = false;
+    const mailService = {
+      sendUserCheckoutComplete: jest.fn(async () => {
+        notificationObservedAfterStatusPersistence = statusPersisted;
+        throw new Error('mail provider unavailable');
+      }),
+    } as unknown as MailService;
+    const notificationService = new OrderNotificationService(mailService);
+    const service = new OrderPayOsGatewayService(
+      {
+        order: { update },
+      } as unknown as PrismaService,
+      notificationService,
+      {} as never
+    );
+
+    await expect(
+      service.markPaymentSucceeded('order-1')
+    ).resolves.toBeUndefined();
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'order-1' },
+      data: { transactionStatus: OrderTransactionStatus.PAID },
+    });
+    expect(mailService.sendUserCheckoutComplete).toHaveBeenCalledWith(
+      order,
+      order.email,
+      order.email
+    );
+    expect(notificationObservedAfterStatusPersistence).toBe(true);
+  });
+
+  it('does not notify when PayOS status persistence fails', async () => {
+    const persistenceError = new Error('database unavailable');
+    const update = jest.fn().mockRejectedValue(persistenceError);
+    const notificationService = {
+      sendCheckoutComplete: jest.fn(),
+    } as unknown as OrderNotificationService;
+    const service = new OrderPayOsGatewayService(
+      {
+        order: { update },
+      } as unknown as PrismaService,
+      notificationService,
+      {} as never
+    );
+
+    await expect(service.markPaymentSucceeded('order-1')).rejects.toBe(
+      persistenceError
+    );
+
+    expect(notificationService.sendCheckoutComplete).not.toHaveBeenCalled();
+  });
+});

@@ -26,13 +26,14 @@ import {
   EmployeeSignInResponseDTO,
   JWTToken,
 } from './auth.types';
+import { getErrorMessage, getErrorStack } from 'src/utils/helper/error.helper';
 
 @UseInterceptors(LoggerInterceptor)
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('/employee/sign-in')
   @HttpCode(HttpStatus.OK)
@@ -42,9 +43,11 @@ export class AuthController {
     try {
       return await this.authService.employeeSignIn(dto);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`employeeSignIn failed: ${message}`, stack);
+      const message = getErrorMessage(error);
+      this.logger.error(
+        `employeeSignIn failed: ${message}`,
+        getErrorStack(error)
+      );
       throw new InternalServerErrorException(message);
     }
   }
@@ -67,9 +70,11 @@ export class AuthController {
     try {
       return await this.authService.customerSignIn(dto);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`customerSignIn failed: ${message}`, stack);
+      const message = getErrorMessage(error);
+      this.logger.error(
+        `customerSignIn failed: ${message}`,
+        getErrorStack(error)
+      );
 
       if (error instanceof HttpException) {
         throw error;
@@ -98,9 +103,11 @@ export class AuthController {
       if (error instanceof BadRequestException) {
         throw error;
       }
-      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`customerSignUp failed: ${message}`, stack);
+      const message = getErrorMessage(error);
+      this.logger.error(
+        `customerSignUp failed: ${message}`,
+        getErrorStack(error)
+      );
       throw new InternalServerErrorException(message);
     }
   }
@@ -129,9 +136,11 @@ export class AuthController {
       ) {
         throw error;
       }
-      const message = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
-      const stack = error instanceof Error ? error.stack : undefined;
-      this.logger.error(`verifySignUpOtp failed: ${message}`, stack);
+      const message = getErrorMessage(error);
+      this.logger.error(
+        `verifySignUpOtp failed: ${message}`,
+        getErrorStack(error)
+      );
       throw new InternalServerErrorException(message);
     }
   }

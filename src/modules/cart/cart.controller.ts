@@ -40,7 +40,7 @@ export class CartController {
   getGuestItems(
     @Query('cartId') cartId: string | undefined,
     @Res() res
-  ): Promise<Response> {    
+  ): Promise<Response> {
     return this.cartService.getGuestItems(cartId, res);
   }
 

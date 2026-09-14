@@ -1,10 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CustomerService } from '../../customer/customer.service';
 import { TokenService } from './token.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from '../../mail/mail.service';
-import { CustomerSignInDTO, CustomerSignUpDTO, VerifySignUpDTO } from '../auth.dto';
-import { CustomerSignInResponseDTO, JWTPayload, SignUpResult, VerifyOtpResult } from '../auth.types';
+import {
+  CustomerSignInDTO,
+  CustomerSignUpDTO,
+  VerifySignUpDTO,
+} from '../auth.dto';
+import {
+  CustomerSignInResponseDTO,
+  JWTPayload,
+  SignUpResult,
+  VerifyOtpResult,
+} from '../auth.types';
 import { hashPlainText } from 'src/utils/helper/bcryptHelper';
 import { generateOTP } from 'src/utils/helper/OtpGenerator';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
@@ -30,7 +39,8 @@ export class CustomerAuthService {
       email: customer.email,
     };
 
-    const { accessToken, refreshToken } = await this.tokenService.generateTokenPair(payload);
+    const { accessToken, refreshToken } =
+      await this.tokenService.generateTokenPair(payload);
 
     return {
       user: {
@@ -54,7 +64,9 @@ export class CustomerAuthService {
     return result;
   }
 
-  private async executeSignUpTransaction(dto: CustomerSignUpDTO): Promise<SignUpResult> {
+  private async executeSignUpTransaction(
+    dto: CustomerSignUpDTO
+  ): Promise<SignUpResult> {
     return this.prisma.$transaction(
       async (tx) => {
         const existingCustomer = await tx.customer.findFirst({

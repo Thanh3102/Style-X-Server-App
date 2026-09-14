@@ -3,7 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { MailModule } from '../mail/mail.module';
 import { EmployeesModule } from '../employees/employees.module';
 import { CustomerModule } from '../customer/customer.module';
@@ -17,17 +16,9 @@ import { TokenService } from './services/token.service';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       global: true,
-      useFactory: async (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET_KEY');
-        if (!secret) {
-          throw new Error(
-            'JWT_SECRET_KEY is not defined in environment variables'
-          );
-        }
-        return {
-          secret,
-        };
-      },
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_SECRET_KEY'),
+      }),
       inject: [ConfigService],
     }),
     EmployeesModule,
@@ -40,7 +31,6 @@ import { TokenService } from './services/token.service';
     CustomerAuthService,
     EmployeeAuthService,
     TokenService,
-    PrismaService,
   ],
   exports: [AuthService],
 })
