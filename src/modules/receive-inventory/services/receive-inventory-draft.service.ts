@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { PrismaTransactionClient } from 'src/prisma/prisma.types';
 import { generateCustomID } from 'src/utils/helper/CustomIDGenerator';
 import {
@@ -23,7 +24,7 @@ export class ReceiveInventoryDraftService {
   private readonly tagType = TagType.RECEIVE;
 
   constructor(
-    private readonly prisma: import('src/prisma/prisma.service').PrismaService,
+    private readonly prisma: PrismaService,
     private readonly validationService: ReceiveInventoryValidationService
   ) {}
 
